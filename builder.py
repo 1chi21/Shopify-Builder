@@ -83,6 +83,27 @@ def clean_str(val):
     return s
 
 
+def normalize_lift_value(val):
+    """Normaliza valores de lift height a string consistente"""
+    if pd.isna(val):
+        return ""
+    
+    if isinstance(val, datetime):
+        return ""
+    
+    s = str(val).strip()
+    if s.lower() in ("nan", "none", "n/a", "", "nat"):
+        return ""
+    
+    try:
+        num = float(s)
+        if num == int(num):
+            return str(int(num))
+        return str(num)
+    except:
+        return s
+
+
 def extract_lift_from_sku(sku):
     sku = str(sku).upper()
     m = re.search(r'(\d+\.?\d*)\s*(?:STC|MED|HVY|STOCK)', sku)
@@ -185,6 +206,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
     for c in ["Make", "Model", "Year", "Brand"]:
         if c in df.columns:
             df[c] = df[c].apply(clean_str)
+
+    if lift_col and lift_col in df.columns:
+        df[lift_col] = df[lift_col].apply(normalize_lift_value)
 
     has_v = pd.Series([True] * len(df), index=df.index)
     if "Make" in df.columns:
