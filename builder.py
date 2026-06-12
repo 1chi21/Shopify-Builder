@@ -272,7 +272,7 @@ def analyze_input(df):
     info["rear_lift_col"] = rear_lift_col
 
     if shock_col:
-        info["shocks"] = sorted(df[shock_col].dropna().unique().tolist())
+        info["shocks"] = sorted([str(s) for s in df[shock_col].dropna().unique().tolist()])
 
     if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
         info["qty_col"] = "Qty Customer"
