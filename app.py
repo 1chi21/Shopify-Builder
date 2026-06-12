@@ -2,9 +2,12 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 CHANGELOG = """
+### v1.2.0 (2026-06-10)
+- **Años abreviados en título**: "2024-2026" → "(24-26)", "2010-2024" → "(10-24)"
+
 ### v1.1.0 (2026-06-10)
 - **Shock como diferenciador de producto**: Cada tipo de shock (IMS, MRR, Nitro, etc.) ahora genera un producto separado en Shopify
 - **Título mejorado**: Incluye nombre del shock y rango de alturas (ej: "Dobinsons IMS Lift Kit for Lexus GX550 (2024) - 2-3 inch")

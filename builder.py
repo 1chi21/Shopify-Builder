@@ -174,6 +174,16 @@ def build_body_html(parts_df, qty_col):
     return f"<table><tbody><tr><td><strong>Item</strong></td><td><strong>Qty</strong></td></tr>{rows}</tbody></table>"
 
 
+def abbreviate_year(year_str):
+    parts = re.findall(r'\d{4}', str(year_str))
+    if not parts:
+        return year_str
+    short = [p[2:] for p in parts]
+    if len(short) == 1:
+        return short[0]
+    return f"{short[0]}-{short[-1]}"
+
+
 def build_title(first_row, brand, shock_name="", lift_range=""):
     make = clean_str(first_row.get("Make", ""))
     model = clean_str(first_row.get("Model", ""))
@@ -185,7 +195,7 @@ def build_title(first_row, brand, shock_name="", lift_range=""):
     if make and model:
         pts.append(f"for {make} {model}")
     if year:
-        pts.append(f"({year})")
+        pts.append(f"({abbreviate_year(year)})")
     if lift_range:
         pts.append(f"- {lift_range}")
     return " ".join(pts)
