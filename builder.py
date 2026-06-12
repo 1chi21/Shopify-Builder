@@ -350,25 +350,35 @@ def analyze_input(df):
 
 
 def build_in_the_box(vdf_for_sku, qty_col, position_col=None, type_col=None, part_sku_col=None, is_ome=False):
-    parts = vdf_for_sku[["Part Name", qty_col]].drop_duplicates("Part Name").sort_values("Part Name")
+    # Seleccionar columnas necesarias
+    cols_needed = ["Part Name", qty_col]
+    if position_col and position_col in vdf_for_sku.columns:
+        cols_needed.append(position_col)
+    if type_col and type_col in vdf_for_sku.columns:
+        cols_needed.append(type_col)
+    if part_sku_col and part_sku_col in vdf_for_sku.columns:
+        cols_needed.append(part_sku_col)
+    
+    parts = vdf_for_sku[cols_needed].drop_duplicates("Part Name").sort_values("Part Name")
     lines = []
     for _, r in parts.iterrows():
-        nm = str(r["Part Name"]).strip() if pd.notna(r["Part Name"]) else "Hardware"
         qv = int(r[qty_col]) if pd.notna(r[qty_col]) and r[qty_col] != 0 else 1
         
-        position = clean_str(r.get(position_col, "")) if position_col else ""
-        part_type = clean_str(r.get(type_col, "")) if type_col else ""
+        position = clean_str(r.get(position_col, "")) if position_col and position_col in r else ""
+        part_type = clean_str(r.get(type_col, "")) if type_col and type_col in r else ""
         
-        desc_parts = []
-        if position:
-            desc_parts.append(position)
-        if part_type:
-            desc_parts.append(part_type)
-        desc_parts.append(nm)
+        # Usar Position + Type si están disponibles, sino Part Name
+        if position and part_type:
+            desc = f"{position} {part_type}"
+        elif position:
+            desc = position
+        elif part_type:
+            desc = part_type
+        else:
+            nm = str(r["Part Name"]).strip() if pd.notna(r["Part Name"]) else "Hardware"
+            desc = nm
         
-        desc = " ".join(desc_parts)
-        
-        if part_sku_col and part_sku_col in vdf_for_sku.columns and not is_ome:
+        if part_sku_col and part_sku_col in r and not is_ome:
             sku = clean_str(r.get(part_sku_col, ""))
             if sku:
                 lines.append(f"{qv} | {desc} {sku}")

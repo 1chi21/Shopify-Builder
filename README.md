@@ -80,6 +80,14 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.6.4 (2026-06-10)
+- **In the box corregido**: Ahora usa correctamente Position + Type (ej: "Front Shock SKU123")
+- **Formato final**: `2 | Front Shock SKU123 | 2 | Rear Shock SKU456`
+
+### v1.6.3 (2026-06-10)
+- **In the box simplificado**: Ahora usa solo Position + Type (ej: "Front Shock")
+- **Formato más corto**: `2 | Front Shock SKU123 | 2 | Rear Shock SKU456`
+
 ### v1.6.2 (2026-06-10)
 - **Rango de alturas en título**: Corregido para que siempre se incluya
 - **Normalización de lift height**: Ahora extrae números de texto como "2 inch" → "2"

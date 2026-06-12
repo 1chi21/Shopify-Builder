@@ -2,9 +2,17 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel
 
-APP_VERSION = "1.6.2"
+APP_VERSION = "1.6.4"
 
 CHANGELOG = """
+### v1.6.4 (2026-06-10)
+- **In the box corregido**: Ahora usa correctamente Position + Type (ej: "Front Shock SKU123")
+- **Formato final**: `2 | Front Shock SKU123 | 2 | Rear Shock SKU456`
+
+### v1.6.3 (2026-06-10)
+- **In the box simplificado**: Ahora usa solo Position + Type (ej: "Front Shock") en lugar de Part Name completo
+- **Formato más corto**: `2 | Front Shock SKU123 | 2 | Rear Shock SKU456`
+
 ### v1.6.2 (2026-06-10)
 - **Rango de alturas en título**: Corregido para que siempre se incluya (ej: "Bilstein B8 5100 2-3-inch Lift Kit F-250 (17-22)")
 - **Normalización de lift height**: Ahora extrae números de texto como "2 inch" → "2"
