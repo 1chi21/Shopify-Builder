@@ -375,10 +375,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         has_v = has_v & (df["Model"] != "")
     df = df[has_v].copy()
 
-    veh_parts = [df["Make"], df["Model"], df["Year"], df["Brand"]]
+    df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
     if shock_col and shock_col in df.columns:
-        veh_parts.append(df[shock_col])
-    df["_veh"] = "|".join(veh_parts)
+        df["_veh"] = df["_veh"] + "|" + df[shock_col].astype(str)
     vehicles = sorted(df["_veh"].unique())
 
     all_product_rows = []
