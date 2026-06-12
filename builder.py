@@ -24,6 +24,24 @@ REAR_LOAD_MAP = {
     "AddALeaf": "Add-A-Leaf",
 }
 
+FRONT_LOAD_ORDER = {
+    "Standard (Up to 50 lbs)": 0,
+    "Medium (50-150 lbs)": 1,
+    "Heavy (150-250 lbs)": 2,
+    "Extra Heavy": 3,
+    "None - I'll use my own": 99,
+}
+
+REAR_LOAD_ORDER = {
+    "None - I'll use my own": 0,
+    "Standard (Up to 200 lbs)": 1,
+    "Medium (225-400 lbs)": 2,
+    "Heavy (+400 lbs)": 3,
+    "Extra Heavy": 4,
+    "Block": 5,
+    "Add-A-Leaf": 6,
+}
+
 COLS = [
     "Handle", "Command", "Title", "Body HTML", "Vendor", "Type",
     "Tags", "Tags Command", "Status", "Published", "Published At",
@@ -45,6 +63,10 @@ LIFT_HEIGHT_COL_CANDIDATES = [
     "Lift Height", "Height", "Lift", "Lift Setting",
     "LiftHeight", "lift_height", "height", "lift",
     "Lift Range", "LiftRange", "lift_range",
+]
+
+SHOCK_COL_CANDIDATES = [
+    "Shock", "Shock Type", "ShockType", "shock", "shock_type",
 ]
 
 
@@ -84,17 +106,13 @@ def clean_str(val):
 
 
 def normalize_lift_value(val):
-    """Normaliza valores de lift height a string consistente"""
     if pd.isna(val):
         return ""
-    
     if isinstance(val, datetime):
         return ""
-    
     s = str(val).strip()
     if s.lower() in ("nan", "none", "n/a", "", "nat"):
         return ""
-    
     try:
         num = float(s)
         if num == int(num):
@@ -115,6 +133,37 @@ def extract_lift_from_sku(sku):
     return None
 
 
+def build_lift_range(lift_values):
+    nums = []
+    for v in lift_values:
+        v = clean_str(v)
+        if not v:
+            continue
+        v = v.replace(" inches", "").replace(" inch", "").strip()
+        try:
+            nums.append(float(v))
+        except:
+            pass
+    if not nums:
+        return ""
+    nums = sorted(set(nums))
+    min_v = nums[0]
+    max_v = nums[-1]
+    if min_v == max_v:
+        if min_v == int(min_v):
+            return f"{int(min_v)} inch"
+        return f"{min_v} inch"
+    if min_v == int(min_v):
+        min_s = str(int(min_v))
+    else:
+        min_s = str(min_v)
+    if max_v == int(max_v):
+        max_s = str(int(max_v))
+    else:
+        max_s = str(max_v)
+    return f"{min_s}-{max_s} inch"
+
+
 def build_body_html(parts_df, qty_col):
     up = parts_df[["Part Name", qty_col]].drop_duplicates("Part Name").sort_values("Part Name")
     rows = ""
@@ -125,20 +174,41 @@ def build_body_html(parts_df, qty_col):
     return f"<table><tbody><tr><td><strong>Item</strong></td><td><strong>Qty</strong></td></tr>{rows}</tbody></table>"
 
 
-def build_title(first_row, brand):
+def build_title(first_row, brand, shock_name="", lift_range=""):
     make = clean_str(first_row.get("Make", ""))
     model = clean_str(first_row.get("Model", ""))
     year = clean_str(first_row.get("Year", ""))
-    pts = [brand, "Lift Kit"]
+    pts = [brand]
+    if shock_name:
+        pts.append(shock_name)
+    pts.append("Lift Kit")
     if make and model:
         pts.append(f"for {make} {model}")
     if year:
         pts.append(f"({year})")
+    if lift_range:
+        pts.append(f"- {lift_range}")
     return " ".join(pts)
 
 
 def build_handle(title):
     return re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+
+
+def sort_variants(vars_df):
+    def sort_key(row):
+        lift = clean_str(row.get("_lift_val", "")).replace(" inches", "").replace(" inch", "")
+        try:
+            lift_num = float(lift) if lift else 0
+        except:
+            lift_num = 0
+        front_order = FRONT_LOAD_ORDER.get(row["_front_val"], 99)
+        rear_order = REAR_LOAD_ORDER.get(row["_rear_val"], 99)
+        return (lift_num, front_order, rear_order)
+
+    rows = vars_df.to_dict("records")
+    rows.sort(key=sort_key)
+    return pd.DataFrame(rows)
 
 
 def parse_input(filepath_or_buffer):
@@ -153,7 +223,9 @@ def analyze_input(df):
         "columns": list(df.columns),
         "vendors": [],
         "vehicles": [],
+        "shocks": [],
         "lift_col": None,
+        "shock_col": None,
         "qty_col": None,
     }
 
@@ -162,6 +234,12 @@ def analyze_input(df):
 
     lift_col = _find_column(df, LIFT_HEIGHT_COL_CANDIDATES)
     info["lift_col"] = lift_col
+
+    shock_col = _find_column(df, SHOCK_COL_CANDIDATES)
+    info["shock_col"] = shock_col
+
+    if shock_col:
+        info["shocks"] = sorted(df[shock_col].dropna().unique().tolist())
 
     if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
         info["qty_col"] = "Qty Customer"
@@ -191,7 +269,8 @@ def analyze_input(df):
 
 
 def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
-                          product_type="Lift Kits", lift_col=None, qty_col=None):
+                          product_type="Lift Kits", lift_col=None, shock_col=None,
+                          qty_col=None):
     if qty_col is None:
         if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
             qty_col = "Qty Customer"
@@ -203,12 +282,18 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
     if lift_col is None:
         lift_col = _find_column(df, LIFT_HEIGHT_COL_CANDIDATES)
 
+    if shock_col is None:
+        shock_col = _find_column(df, SHOCK_COL_CANDIDATES)
+
     for c in ["Make", "Model", "Year", "Brand"]:
         if c in df.columns:
             df[c] = df[c].apply(clean_str)
 
     if lift_col and lift_col in df.columns:
         df[lift_col] = df[lift_col].apply(normalize_lift_value)
+
+    if shock_col and shock_col in df.columns:
+        df[shock_col] = df[shock_col].apply(clean_str)
 
     has_v = pd.Series([True] * len(df), index=df.index)
     if "Make" in df.columns:
@@ -217,7 +302,10 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         has_v = has_v & (df["Model"] != "")
     df = df[has_v].copy()
 
-    df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
+    veh_parts = [df["Make"], df["Model"], df["Year"], df["Brand"]]
+    if shock_col and shock_col in df.columns:
+        veh_parts.append(df[shock_col])
+    df["_veh"] = "|".join(veh_parts)
     vehicles = sorted(df["_veh"].unique())
 
     all_product_rows = []
@@ -228,8 +316,14 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         first = vdf.iloc[0]
         brand = clean_str(first.get("Brand", ""))
         vendor = brand if brand else "Unknown"
+        shock_name = clean_str(first.get(shock_col, "")) if shock_col else ""
 
-        title = build_title(first, brand)
+        lift_values = []
+        if lift_col and lift_col in vdf.columns:
+            lift_values = vdf[lift_col].unique().tolist()
+        lift_range = build_lift_range(lift_values)
+
+        title = build_title(first, brand, shock_name=shock_name, lift_range=lift_range)
         handle = build_handle(title)
         pub_at = now_timestamp()
         body_html = build_body_html(vdf, qty_col)
@@ -264,6 +358,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             vars_df["_rear_val"]
         )
         vars_df = vars_df.drop_duplicates(subset=["_opt_key"], keep="first")
+
+        vars_df = sort_variants(vars_df)
 
         product_row = blank_row()
         product_row.update({
@@ -334,6 +430,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             "handle": handle,
             "title": title,
             "vendor": vendor,
+            "shock": shock_name,
+            "lift_range": lift_range,
             "variants": len(variant_rows),
         })
 

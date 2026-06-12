@@ -2,6 +2,23 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel
 
+APP_VERSION = "1.1.0"
+
+CHANGELOG = """
+### v1.1.0 (2026-06-10)
+- **Shock como diferenciador de producto**: Cada tipo de shock (IMS, MRR, Nitro, etc.) ahora genera un producto separado en Shopify
+- **Título mejorado**: Incluye nombre del shock y rango de alturas (ej: "Dobinsons IMS Lift Kit for Lexus GX550 (2024) - 2-3 inch")
+- **Orden de variantes**: Standard → Medium → Heavy (en lugar de orden alfabético)
+- **Detección automática de columna Shock**: Busca columnas llamadas "Shock" o "Shock Type"
+
+### v1.0.0 (2026-06-10)
+- Versión inicial
+- Generación de Excel compatible con Matrixify
+- 3 opciones de variante: Lift Setting + Front Load + Rear Load
+- Detección automática de vendors, vehículos y columnas
+- Comando NEW para productos nuevos
+"""
+
 st.set_page_config(
     page_title="Shopify Product Builder",
     page_icon="🛒",
@@ -9,6 +26,7 @@ st.set_page_config(
 )
 
 st.title("🛒 Shopify Product Builder")
+st.caption(f"Versión {APP_VERSION}")
 st.markdown("Genera archivos Excel compatibles con Matrixify para importar productos a Shopify")
 
 with st.sidebar:
@@ -32,6 +50,11 @@ with st.sidebar:
         value="Lift Kits",
         help="Tipo de producto en Shopify"
     )
+    
+    st.divider()
+    
+    with st.expander("📋 Changelog"):
+        st.markdown(CHANGELOG)
     
     st.divider()
     st.markdown("### 📋 Instrucciones")
@@ -72,12 +95,20 @@ if uploaded_file is not None:
                     st.warning("⚠️ Columna Lift no encontrada")
             
             with col3:
-                st.metric("Columna Qty", info['qty_col'] or "No encontrada")
+                if info['shock_col']:
+                    st.success(f"Columna Shock: {info['shock_col']}")
+                    st.metric("Tipos de shock", len(info['shocks']))
+                else:
+                    st.warning("⚠️ Columna Shock no encontrada")
+                
                 if info['vehicles_without_data'] > 0:
                     st.warning(f"⚠️ {info['vehicles_without_data']} filas sin Make/Model")
             
             if info['vendors']:
                 st.markdown("**Vendors:** " + ", ".join(info['vendors']))
+            
+            if info['shocks']:
+                st.markdown("**Shocks:** " + ", ".join(info['shocks']))
             
             if info['vehicles']:
                 st.markdown(f"**Vehículos:** {len(info['vehicles'])} únicos")
@@ -103,6 +134,7 @@ if uploaded_file is not None:
                         status=status,
                         product_type=product_type,
                         lift_col=info['lift_col'],
+                        shock_col=info['shock_col'],
                         qty_col=info['qty_col']
                     )
                     
@@ -154,12 +186,14 @@ else:
         - `Front Load` - Carga frontal (Standard, Medium, Heavy, etc.)
         - `Rear Load` - Carga trasera (Standard, Medium, Heavy, etc.)
         
-        **Opcional:**
+        **Opcionales:**
+        - `Shock` / `Shock Type` - Tipo de shock (IMS, MRR, Nitro, etc.)
+          - Cada tipo de shock genera un producto separado
         - `Lift Height` / `Height` / `Lift` - Altura del lift (2, 2.5, 3, etc.)
           - Si no está presente, se extraerá del Parent Sku
         
         **Ejemplo:**
-        | Make | Model | Year | Brand | Part Name | Qty | Parent Sku | Total Price | Front Load | Rear Load | Height |
-        |------|-------|------|-------|-----------|-----|------------|-------------|------------|-----------|--------|
-        | Toyota | 4Runner | 2020 | Old Man Emu | Coil Spring | 2 | OME4R-2STC | 1147.70 | Standard | Heavy | 2 |
+        | Make | Model | Year | Brand | Shock | Part Name | Qty | Parent Sku | Total Price | Front Load | Rear Load | Height |
+        |------|-------|------|-------|-------|-----------|-----|------------|-------------|------------|-----------|--------|
+        | Toyota | 4Runner | 2020 | Old Man Emu | Nitro | Coil Spring | 2 | OME4R-2STC | 1147.70 | Standard | Heavy | 2 |
         """)
