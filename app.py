@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel
 
-APP_VERSION = "1.6.1"
+APP_VERSION = "1.6.2"
 
 CHANGELOG = """
+### v1.6.2 (2026-06-10)
+- **Rango de alturas en título**: Corregido para que siempre se incluya (ej: "Bilstein B8 5100 2-3-inch Lift Kit F-250 (17-22)")
+- **Normalización de lift height**: Ahora extrae números de texto como "2 inch" → "2"
+
 ### v1.6.1 (2026-06-10)
 - **Detección de columnas mejorada**: Ahora detecta variaciones como "PartSku", "Pos", "PartType"
 - **Limpieza de nombres de columnas**: Elimina caracteres invisibles y normaliza espacios

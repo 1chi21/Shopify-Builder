@@ -80,6 +80,10 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.6.2 (2026-06-10)
+- **Rango de alturas en título**: Corregido para que siempre se incluya
+- **Normalización de lift height**: Ahora extrae números de texto como "2 inch" → "2"
+
 ### v1.6.1 (2026-06-10)
 - **Detección de columnas mejorada**: Ahora detecta variaciones como "PartSku", "Pos", "PartType"
 - **Limpieza de nombres de columnas**: Elimina caracteres invisibles y normaliza espacios

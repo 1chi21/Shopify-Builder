@@ -146,13 +146,22 @@ def normalize_lift_value(val):
     s = str(val).strip()
     if s.lower() in ("nan", "none", "n/a", "", "nat"):
         return ""
+    # Intentar convertir directamente a número
     try:
         num = float(s)
         if num == int(num):
             return str(int(num))
         return str(num)
     except:
-        return s
+        pass
+    # Si no es un número puro, extraer el número del texto
+    match = re.search(r'(\d+\.?\d*)', s)
+    if match:
+        num = float(match.group(1))
+        if num == int(num):
+            return str(int(num))
+        return str(num)
+    return s
 
 
 def extract_lift_from_sku(sku):
@@ -172,11 +181,15 @@ def build_lift_range(lift_values):
         v = clean_str(v)
         if not v:
             continue
+        # Limpiar el valor de cualquier texto adicional
         v = v.replace(" inches", "").replace(" inch", "").strip()
-        try:
-            nums.append(float(v))
-        except:
-            pass
+        # Intentar extraer solo el número
+        match = re.search(r'(\d+\.?\d*)', v)
+        if match:
+            try:
+                nums.append(float(match.group(1)))
+            except:
+                pass
     if not nums:
         return ""
     nums = sorted(set(nums))
