@@ -2,9 +2,28 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel
 
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.6.0"
 
 CHANGELOG = """
+### v1.6.0 (2026-06-10)
+- **Título corregido**: Formato `MARCA SHOCK ALTURA-inch Lift Kit MODELO (AÑO)` (ej: `Dobinsons IMS 2.5-inch Lift Kit GX550 (24)`)
+- **Handle**: Se genera automáticamente del título
+- **In the box mejorado**: Usa columnas Position + Type + Part Name (ej: `2 | Front Coil Spring | Part Name (SKU)`)
+- **Detección de columnas**: Position, Type, Part Sku
+
+### v1.5.0 (2026-06-10)
+- **In the box formato corto**: `2x Coil Spring (SKU123) | 2x Rear Shock (SKU456)`
+- **Part Sku**: Usa columna "Part Sku" para el numero de parte en in_the_box
+- **OME sin SKU**: Cuando vendor es Old Man Emu/OME, no incluye numero de parte en in_the_box
+
+### v1.4.0 (2026-06-10)
+- **Sell without stock**: `Inventory Policy` cambiado a `continue` (siempre activo)
+- **Producto físico**: `Requires Shipping` cambiado a `TRUE`
+- **Handle nuevo formato**: `MARCA_SHOCK_ALTURA-INCH_LIFT-KIT_MODELO_AÑO` (ej: `dobinsons_ims_2.5-inch_lift-kit_gx550_24`)
+- **Bilstein B8**: Si vendor es Bilstein, la marca en el handle es "Bilstein-B8"
+- **Metafield de color**: Para vendor Dobinsons, usa columna "Color" → `custom.color`
+- **Metafields de producto**: Formato cambiado de JSON a `;` separado (ej: `2 inch;2.5 inch;3 inch`)
+
 ### v1.3.0 (2026-06-10)
 - **Metafields de producto**: `custom.height` (lista de alturas) y `custom.load` (lista de cargas)
 - **Metafields de variante**: `custom.in_the_box`, `custom.lift_range`, `custom.shock_position`, `custom.shipping_ome_bilstein`, `custom.shipping_dobinsons`
@@ -120,6 +139,26 @@ if uploaded_file is not None:
                 else:
                     st.warning("⚠️ Columna Rear Lift no encontrada")
                 
+                if info.get('color_col'):
+                    st.success(f"Columna Color: {info['color_col']}")
+                else:
+                    st.info("ℹ️ Columna Color no encontrada (solo para Dobinsons)")
+                
+                if info.get('part_sku_col'):
+                    st.success(f"Columna Part Sku: {info['part_sku_col']}")
+                else:
+                    st.info("ℹ️ Columna Part Sku no encontrada")
+                
+                if info.get('position_col'):
+                    st.success(f"Columna Position: {info['position_col']}")
+                else:
+                    st.info("ℹ️ Columna Position no encontrada")
+                
+                if info.get('type_col'):
+                    st.success(f"Columna Type: {info['type_col']}")
+                else:
+                    st.info("ℹ️ Columna Type no encontrada")
+                
                 if info['vehicles_without_data'] > 0:
                     st.warning(f"⚠️ {info['vehicles_without_data']} filas sin Make/Model")
             
@@ -156,6 +195,10 @@ if uploaded_file is not None:
                         shock_col=info['shock_col'],
                         pin_position_col=info['pin_position_col'],
                         rear_lift_col=info['rear_lift_col'],
+                        color_col=info['color_col'],
+                        part_sku_col=info['part_sku_col'],
+                        position_col=info['position_col'],
+                        type_col=info['type_col'],
                         qty_col=info['qty_col']
                     )
                     

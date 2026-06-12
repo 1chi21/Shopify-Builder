@@ -59,11 +59,28 @@ COLS = [
     "Variant Inventory Qty", "Variant Inventory Adjust",
     "Metafield: custom.height [list.single_line_text_field]",
     "Metafield: custom.load [list.single_line_text_field]",
+    "Metafield: custom.color [list.single_line_text_field]",
     "Variant Metafield: custom.in_the_box [multi_line_text_field]",
     "Variant Metafield: custom.lift_range [single_line_text_field]",
     "Variant Metafield: custom.shock_position [single_line_text_field]",
     "Variant Metafield: custom.shipping_ome_bilstein [single_line_text_field]",
     "Variant Metafield: custom.shipping_dobinsons [single_line_text_field]",
+]
+
+COLOR_COL_CANDIDATES = [
+    "Color", "Colour", "color", "colour",
+]
+
+PART_SKU_COL_CANDIDATES = [
+    "Part Sku", "PartSku", "Part SKU", "part_sku", "Part Number", "PartNumber",
+]
+
+POSITION_COL_CANDIDATES = [
+    "Position", "position",
+]
+
+TYPE_COL_CANDIDATES = [
+    "Type", "Part Type", "PartType", "part_type",
 ]
 
 LIFT_HEIGHT_COL_CANDIDATES = [
@@ -199,21 +216,21 @@ def abbreviate_year(year_str):
     return f"{short[0]}-{short[-1]}"
 
 
-def build_title(first_row, brand, shock_name="", lift_range=""):
-    make = clean_str(first_row.get("Make", ""))
-    model = clean_str(first_row.get("Model", ""))
-    year = clean_str(first_row.get("Year", ""))
-    pts = [brand]
-    if shock_name:
-        pts.append(shock_name)
-    pts.append("Lift Kit")
-    if make and model:
-        pts.append(f"for {make} {model}")
-    if year:
-        pts.append(f"({abbreviate_year(year)})")
-    if lift_range:
-        pts.append(f"- {lift_range}")
-    return " ".join(pts)
+def build_title(brand, shock_name, lift_range, model, year):
+    if "bilstein" in brand.lower():
+        marca = "Bilstein B8"
+    else:
+        marca = brand
+    
+    shock = shock_name if shock_name else ""
+    
+    lift_clean = lift_range.replace(" inch", "-inch") if lift_range else ""
+    
+    model_clean = model
+    year_abbr = abbreviate_year(year) if year else ""
+    
+    parts = [p for p in [marca, shock, lift_clean, "Lift Kit", model_clean, f"({year_abbr})"] if p]
+    return " ".join(parts)
 
 
 def build_handle(title):
@@ -253,6 +270,10 @@ def analyze_input(df):
         "shock_col": None,
         "pin_position_col": None,
         "rear_lift_col": None,
+        "color_col": None,
+        "part_sku_col": None,
+        "position_col": None,
+        "type_col": None,
         "qty_col": None,
     }
 
@@ -270,6 +291,18 @@ def analyze_input(df):
 
     rear_lift_col = _find_column(df, REAR_LIFT_COL_CANDIDATES)
     info["rear_lift_col"] = rear_lift_col
+
+    color_col = _find_column(df, COLOR_COL_CANDIDATES)
+    info["color_col"] = color_col
+
+    part_sku_col = _find_column(df, PART_SKU_COL_CANDIDATES)
+    info["part_sku_col"] = part_sku_col
+
+    position_col = _find_column(df, POSITION_COL_CANDIDATES)
+    info["position_col"] = position_col
+
+    type_col = _find_column(df, TYPE_COL_CANDIDATES)
+    info["type_col"] = type_col
 
     if shock_col:
         info["shocks"] = sorted([str(s) for s in df[shock_col].dropna().unique().tolist()])
@@ -301,13 +334,33 @@ def analyze_input(df):
     return info
 
 
-def build_in_the_box(vdf_for_sku, qty_col):
+def build_in_the_box(vdf_for_sku, qty_col, position_col=None, type_col=None, part_sku_col=None, is_ome=False):
     parts = vdf_for_sku[["Part Name", qty_col]].drop_duplicates("Part Name").sort_values("Part Name")
     lines = []
     for _, r in parts.iterrows():
         nm = str(r["Part Name"]).strip() if pd.notna(r["Part Name"]) else "Hardware"
         qv = int(r[qty_col]) if pd.notna(r[qty_col]) and r[qty_col] != 0 else 1
-        lines.append(f"{qv} | {nm}")
+        
+        position = clean_str(r.get(position_col, "")) if position_col else ""
+        part_type = clean_str(r.get(type_col, "")) if type_col else ""
+        
+        desc_parts = []
+        if position:
+            desc_parts.append(position)
+        if part_type:
+            desc_parts.append(part_type)
+        desc_parts.append(nm)
+        
+        desc = " ".join(desc_parts)
+        
+        if part_sku_col and part_sku_col in vdf_for_sku.columns and not is_ome:
+            sku = clean_str(r.get(part_sku_col, ""))
+            if sku:
+                lines.append(f"{qv} | {desc} {sku}")
+            else:
+                lines.append(f"{qv} | {desc}")
+        else:
+            lines.append(f"{qv} | {desc}")
     return " | ".join(lines)
 
 
@@ -328,16 +381,17 @@ def build_product_metafields(vdf, lift_col, qty_col):
                 loads.append(v)
     loads = sorted(set(loads))
 
-    import json
-    height_json = json.dumps(heights) if heights else ""
-    load_json = json.dumps(loads) if loads else ""
+    height_str = ";".join(heights) if heights else ""
+    load_str = ";".join(loads) if loads else ""
 
-    return height_json, load_json
+    return height_str, load_str
 
 
 def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                           product_type="Lift Kits", lift_col=None, shock_col=None,
-                          pin_position_col=None, rear_lift_col=None, qty_col=None):
+                          pin_position_col=None, rear_lift_col=None, color_col=None,
+                          part_sku_col=None, position_col=None, type_col=None,
+                          qty_col=None):
     if qty_col is None:
         if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
             qty_col = "Qty Customer"
@@ -357,6 +411,18 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
     if rear_lift_col is None:
         rear_lift_col = _find_column(df, REAR_LIFT_COL_CANDIDATES)
+
+    if color_col is None:
+        color_col = _find_column(df, COLOR_COL_CANDIDATES)
+
+    if part_sku_col is None:
+        part_sku_col = _find_column(df, PART_SKU_COL_CANDIDATES)
+
+    if position_col is None:
+        position_col = _find_column(df, POSITION_COL_CANDIDATES)
+
+    if type_col is None:
+        type_col = _find_column(df, TYPE_COL_CANDIDATES)
 
     for c in ["Make", "Model", "Year", "Brand"]:
         if c in df.columns:
@@ -395,7 +461,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             lift_values = vdf[lift_col].unique().tolist()
         lift_range = build_lift_range(lift_values)
 
-        title = build_title(first, brand, shock_name=shock_name, lift_range=lift_range)
+        model = clean_str(first.get("Model", ""))
+        year = clean_str(first.get("Year", ""))
+        title = build_title(brand, shock_name, lift_range, model, year)
         handle = build_handle(title)
         pub_at = now_timestamp()
         body_html = build_body_html(vdf, qty_col)
@@ -439,7 +507,12 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
         vars_df = sort_variants(vars_df)
 
-        height_json, load_json = build_product_metafields(vdf, lift_col, qty_col)
+        height_str, load_str = build_product_metafields(vdf, lift_col, qty_col)
+
+        color_str = ""
+        if color_col and color_col in vdf.columns and "dobinsons" in vendor.lower():
+            colors = [clean_str(c) for c in vdf[color_col].unique() if clean_str(c)]
+            color_str = ";".join(sorted(set(colors)))
 
         product_row = blank_row()
         product_row.update({
@@ -456,8 +529,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             "Published At": pub_at,
             "Published Scope": "global",
             "Gift Card": "FALSE",
-            "Metafield: custom.height [list.single_line_text_field]": height_json,
-            "Metafield: custom.load [list.single_line_text_field]": load_json,
+            "Metafield: custom.height [list.single_line_text_field]": height_str,
+            "Metafield: custom.load [list.single_line_text_field]": load_str,
+            "Metafield: custom.color [list.single_line_text_field]": color_str,
         })
 
         variant_rows = []
@@ -469,7 +543,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
             sku = clean_str(row["Parent Sku"])
             sku_rows = vdf[vdf["Parent Sku"].astype(str).str.strip() == sku]
-            in_the_box = build_in_the_box(sku_rows, qty_col)
+            is_ome = "old man emu" in vendor.lower() or "ome" in vendor.lower()
+            in_the_box = build_in_the_box(sku_rows, qty_col, position_col, type_col, part_sku_col, is_ome)
 
             height_val = clean_str(row.get(lift_col, "")) if lift_col else ""
             rear_lift_val = clean_str(row.get(rear_lift_col, "")) if rear_lift_col else ""
@@ -508,9 +583,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 "Variant Price": price,
                 "Variant Taxable": "FALSE",
                 "Variant Inventory Tracker": "shopify",
-                "Variant Inventory Policy": "deny",
+                "Variant Inventory Policy": "continue",
                 "Variant Fulfillment Service": "manual",
-                "Variant Requires Shipping": "FALSE",
+                "Variant Requires Shipping": "TRUE",
                 "Variant Shipping Profile": "General Profile",
                 "Variant Inventory Qty": 0,
                 "Variant Inventory Adjust": 0,

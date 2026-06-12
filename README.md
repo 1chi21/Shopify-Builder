@@ -31,12 +31,17 @@ Columnas requeridas en `SuspensionConfigurator.xlsx`:
 | Shock / Shock Type | Tipo de shock (opcional, cada shock genera un producto separado) |
 | Pin Position for Install | Posición del pin para instalación (metafield shock_position) |
 | Rear Lift | Rear lift height (metafield lift_range) |
+| Color | Color del producto (metafield custom.color, solo para Dobinsons) |
+| Part Sku | Numero de parte del componente (para in_the_box) |
+| Position | Posición de la parte (Front, Rear, etc.) |
+| Type | Tipo de parte (Coil Spring, Shock, Top Hat, etc.) |
 
 ## Metafields incluidos
 
 ### Metafields de producto
-- `custom.height` - Lista JSON de alturas disponibles (ej: `["2 inch","2.5 inch","3 inch"]`)
-- `custom.load` - Lista JSON de cargas frontales (ej: `["Standard","Medium","Heavy"]`)
+- `custom.height` - Lista de alturas separada por `;` (ej: `2 inch;2.5 inch;3 inch`)
+- `custom.load` - Lista de cargas frontales separada por `;` (ej: `Standard;Medium;Heavy`)
+- `custom.color` - Lista de colores separada por `;` (solo para vendor Dobinsons)
 
 ### Metafields de variante
 - `custom.in_the_box` - Contenido de la variante (Part Names + Qty)
@@ -47,11 +52,15 @@ Columnas requeridas en `SuspensionConfigurator.xlsx`:
 
 ## Características
 
-- **Shock como diferenciador de producto**: Cada tipo de shock (IMS, MRR, Nitro, etc.) genera un producto separado en Shopify
-- **Título inteligente**: Incluye nombre del shock y rango de alturas (ej: "Dobinsons IMS Lift Kit for Lexus GX550 (2024) - 2-3 inch")
-- **Orden de variantes**: Standard → Medium → Heavy (orden lógico, no alfabético)
+- **Sell without stock**: Siempre activo (`Inventory Policy: continue`)
+- **Producto físico**: `Requires Shipping: TRUE`
+- **Handle formato**: `MARCA_SHOCK_ALTURA-INCH_LIFT-KIT_MODELO_AÑO` (ej: `dobinsons_ims_2.5-inch_lift-kit_gx550_24`)
+- **Bilstein B8**: Si vendor es Bilstein, la marca en el handle es "Bilstein-B8"
+- **Shock como diferenciador de producto**: Cada tipo de shock genera un producto separado
+- **Título inteligente**: Incluye nombre del shock y rango de alturas
+- **Orden de variantes**: Standard → Medium → Heavy
 - **3 opciones de variante**: Lift Setting + Front Load + Rear Load
-- **Detección automática**: Vendors, vehículos, columnas de lift y shock
+- **Detección automática**: Vendors, vehículos, columnas de lift, shock, color, pin position, rear lift
 - **Un solo archivo Excel**: Con sheet "Products" listo para Matrixify
 
 ## Instalación local
@@ -70,6 +79,25 @@ streamlit run app.py
 5. Deploy automático en cada push
 
 ## Changelog
+
+### v1.6.0 (2026-06-10)
+- **Título corregido**: Formato `MARCA SHOCK ALTURA-inch Lift Kit MODELO (AÑO)`
+- **Handle**: Se genera automáticamente del título
+- **In the box mejorado**: Usa Position + Type + Part Name
+- **Detección de columnas**: Position, Type, Part Sku
+
+### v1.5.0 (2026-06-10)
+- **In the box formato corto**: `2x Coil Spring (SKU123) | 2x Rear Shock (SKU456)`
+- **Part Sku**: Usa columna "Part Sku" para el numero de parte
+- **OME sin SKU**: Cuando vendor es Old Man Emu/OME, no incluye numero de parte
+
+### v1.4.0 (2026-06-10)
+- **Sell without stock**: `Inventory Policy` → `continue`
+- **Producto físico**: `Requires Shipping` → `TRUE`
+- **Handle nuevo formato**: `MARCA_SHOCK_ALTURA-INCH_LIFT-KIT_MODELO_AÑO`
+- **Bilstein B8**: Marca "Bilstein-B8" si vendor es Bilstein
+- **Metafield de color**: `custom.color` para vendor Dobinsons (columna "Color")
+- **Metafields de producto**: Formato `;` separado en vez de JSON
 
 ### v1.3.0 (2026-06-10)
 - **Metafields de producto**: `custom.height` y `custom.load`
