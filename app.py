@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel
 
-APP_VERSION = "1.6.6"
+APP_VERSION = "1.6.7"
 
 CHANGELOG = """
+### v1.6.7 (2026-06-10)
+- **Variantes corregidas**: Option1 Value ahora muestra rangos completos como "0-2 inches", "3-4 inches", "5-6 inches"
+- **Título con rango total**: Muestra el rango mínimo-máximo de todas las variantes (ej: "0-6 inch")
+
 ### v1.6.6 (2026-06-10)
 - **Rango total en título**: Ahora calcula el rango mínimo-máximo de TODAS las variantes (ej: variantes "0-2", "3-4", "5-6" → título muestra "0-6 inch")
 
