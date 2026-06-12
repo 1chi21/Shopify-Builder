@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.6.1"
 
 CHANGELOG = """
+### v1.6.1 (2026-06-10)
+- **Detección de columnas mejorada**: Ahora detecta variaciones como "PartSku", "Pos", "PartType"
+- **Limpieza de nombres de columnas**: Elimina caracteres invisibles y normaliza espacios
+
 ### v1.6.0 (2026-06-10)
 - **Título corregido**: Formato `MARCA SHOCK ALTURA-inch Lift Kit MODELO (AÑO)` (ej: `Dobinsons IMS 2.5-inch Lift Kit GX550 (24)`)
 - **Handle**: Se genera automáticamente del título
@@ -147,17 +151,17 @@ if uploaded_file is not None:
                 if info.get('part_sku_col'):
                     st.success(f"Columna Part Sku: {info['part_sku_col']}")
                 else:
-                    st.info("ℹ️ Columna Part Sku no encontrada")
+                    st.warning("⚠️ Columna Part Sku no encontrada")
                 
                 if info.get('position_col'):
                     st.success(f"Columna Position: {info['position_col']}")
                 else:
-                    st.info("ℹ️ Columna Position no encontrada")
+                    st.warning("⚠️ Columna Position no encontrada")
                 
                 if info.get('type_col'):
                     st.success(f"Columna Type: {info['type_col']}")
                 else:
-                    st.info("ℹ️ Columna Type no encontrada")
+                    st.warning("⚠️ Columna Type no encontrada")
                 
                 if info['vehicles_without_data'] > 0:
                     st.warning(f"⚠️ {info['vehicles_without_data']} filas sin Make/Model")

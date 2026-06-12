@@ -80,6 +80,10 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.6.1 (2026-06-10)
+- **Detección de columnas mejorada**: Ahora detecta variaciones como "PartSku", "Pos", "PartType"
+- **Limpieza de nombres de columnas**: Elimina caracteres invisibles y normaliza espacios
+
 ### v1.6.0 (2026-06-10)
 - **Título corregido**: Formato `MARCA SHOCK ALTURA-inch Lift Kit MODELO (AÑO)`
 - **Handle**: Se genera automáticamente del título

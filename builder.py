@@ -72,15 +72,15 @@ COLOR_COL_CANDIDATES = [
 ]
 
 PART_SKU_COL_CANDIDATES = [
-    "Part Sku", "PartSku", "Part SKU", "part_sku", "Part Number", "PartNumber",
+    "Part Sku", "PartSku", "Part SKU", "part_sku", "Part Number", "PartNumber", "partsku",
 ]
 
 POSITION_COL_CANDIDATES = [
-    "Position", "position",
+    "Position", "position", "Pos", "pos",
 ]
 
 TYPE_COL_CANDIDATES = [
-    "Type", "Part Type", "PartType", "part_type",
+    "Type", "Part Type", "PartType", "part_type", "parttype",
 ]
 
 LIFT_HEIGHT_COL_CANDIDATES = [
@@ -107,9 +107,10 @@ def _find_column(df, candidates):
         if c in df.columns:
             return c
     for c in df.columns:
-        cl = str(c).lower().strip()
+        cl = str(c).lower().strip().replace(" ", "").replace("_", "")
         for cand in candidates:
-            if cand.lower() in cl:
+            cand_clean = cand.lower().strip().replace(" ", "").replace("_", "")
+            if cand_clean in cl or cl in cand_clean:
                 return c
     return None
 
@@ -255,7 +256,8 @@ def sort_variants(vars_df):
 
 def parse_input(filepath_or_buffer):
     df = pd.read_excel(filepath_or_buffer, sheet_name=0)
-    df.columns = [str(c).strip() for c in df.columns]
+    df.columns = [str(c).strip().replace('\xa0', ' ').replace('\u200b', '').replace('\t', ' ') for c in df.columns]
+    df.columns = [re.sub(r'\s+', ' ', c).strip() for c in df.columns]
     return df
 
 
