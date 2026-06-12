@@ -146,6 +146,13 @@ def normalize_lift_value(val):
     s = str(val).strip()
     if s.lower() in ("nan", "none", "n/a", "", "nat"):
         return ""
+    
+    # Si contiene un guión, es un rango - preservarlo tal cual
+    if "-" in s:
+        # Limpiar texto adicional pero preservar el rango
+        s = s.replace(" inches", "").replace(" inch", "").strip()
+        return s
+    
     # Intentar convertir directamente a número
     try:
         num = float(s)
@@ -154,6 +161,7 @@ def normalize_lift_value(val):
         return str(num)
     except:
         pass
+    
     # Si no es un número puro, extraer el número del texto
     match = re.search(r'(\d+\.?\d*)', s)
     if match:
@@ -183,11 +191,11 @@ def build_lift_range(lift_values):
             continue
         # Limpiar el valor de cualquier texto adicional
         v = v.replace(" inches", "").replace(" inch", "").strip()
-        # Intentar extraer solo el número
-        match = re.search(r'(\d+\.?\d*)', v)
-        if match:
+        # Extraer TODOS los números del valor (para rangos como "0-2" extraer 0 y 2)
+        matches = re.findall(r'(\d+\.?\d*)', v)
+        for match in matches:
             try:
-                nums.append(float(match.group(1)))
+                nums.append(float(match))
             except:
                 pass
     if not nums:

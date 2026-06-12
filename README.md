@@ -80,6 +80,13 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.6.6 (2026-06-10)
+- **Rango total en título**: Ahora calcula el rango mínimo-máximo de TODAS las variantes (ej: variantes "0-2", "3-4", "5-6" → título muestra "0-6 inch")
+
+### v1.6.5 (2026-06-10)
+- **Rangos de altura corregidos**: Ahora preserva rangos como "0-2", "3-4", "5-6" en lugar de extraer solo el primer número
+- **Variantes correctas**: Option1 Value ahora muestra "0-2 inches", "3-4 inches", etc.
+
 ### v1.6.4 (2026-06-10)
 - **In the box corregido**: Ahora usa correctamente Position + Type (ej: "Front Shock SKU123")
 - **Formato final**: `2 | Front Shock SKU123 | 2 | Rear Shock SKU456`
