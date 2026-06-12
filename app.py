@@ -2,9 +2,15 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 CHANGELOG = """
+### v1.3.0 (2026-06-10)
+- **Metafields de producto**: `custom.height` (lista de alturas) y `custom.load` (lista de cargas)
+- **Metafields de variante**: `custom.in_the_box`, `custom.lift_range`, `custom.shock_position`, `custom.shipping_ome_bilstein`, `custom.shipping_dobinsons`
+- **Detección automática** de columnas "Pin Position for Install" y "Rear Lift"
+- **Shipping automático**: asigna shipping según vendor (OME/Bilstein vs Dobinsons)
+
 ### v1.2.0 (2026-06-10)
 - **Años abreviados en título**: "2024-2026" → "(24-26)", "2010-2024" → "(10-24)"
 
@@ -104,6 +110,16 @@ if uploaded_file is not None:
                 else:
                     st.warning("⚠️ Columna Shock no encontrada")
                 
+                if info.get('pin_position_col'):
+                    st.success(f"Columna Pin Position: {info['pin_position_col']}")
+                else:
+                    st.warning("⚠️ Columna Pin Position no encontrada")
+                
+                if info.get('rear_lift_col'):
+                    st.success(f"Columna Rear Lift: {info['rear_lift_col']}")
+                else:
+                    st.warning("⚠️ Columna Rear Lift no encontrada")
+                
                 if info['vehicles_without_data'] > 0:
                     st.warning(f"⚠️ {info['vehicles_without_data']} filas sin Make/Model")
             
@@ -138,6 +154,8 @@ if uploaded_file is not None:
                         product_type=product_type,
                         lift_col=info['lift_col'],
                         shock_col=info['shock_col'],
+                        pin_position_col=info['pin_position_col'],
+                        rear_lift_col=info['rear_lift_col'],
                         qty_col=info['qty_col']
                     )
                     

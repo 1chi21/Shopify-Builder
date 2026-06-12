@@ -57,6 +57,13 @@ COLS = [
     "Variant Inventory Policy", "Variant Fulfillment Service",
     "Variant Requires Shipping", "Variant Shipping Profile",
     "Variant Inventory Qty", "Variant Inventory Adjust",
+    "Metafield: custom.height [list.single_line_text_field]",
+    "Metafield: custom.load [list.single_line_text_field]",
+    "Variant Metafield: custom.in_the_box [multi_line_text_field]",
+    "Variant Metafield: custom.lift_range [single_line_text_field]",
+    "Variant Metafield: custom.shock_position [single_line_text_field]",
+    "Variant Metafield: custom.shipping_ome_bilstein [single_line_text_field]",
+    "Variant Metafield: custom.shipping_dobinsons [single_line_text_field]",
 ]
 
 LIFT_HEIGHT_COL_CANDIDATES = [
@@ -67,6 +74,14 @@ LIFT_HEIGHT_COL_CANDIDATES = [
 
 SHOCK_COL_CANDIDATES = [
     "Shock", "Shock Type", "ShockType", "shock", "shock_type",
+]
+
+PIN_POSITION_COL_CANDIDATES = [
+    "Pin Position for Install", "Pin Position", "pin_position",
+]
+
+REAR_LIFT_COL_CANDIDATES = [
+    "Rear Lift", "RearLift", "rear_lift",
 ]
 
 
@@ -236,6 +251,8 @@ def analyze_input(df):
         "shocks": [],
         "lift_col": None,
         "shock_col": None,
+        "pin_position_col": None,
+        "rear_lift_col": None,
         "qty_col": None,
     }
 
@@ -247,6 +264,12 @@ def analyze_input(df):
 
     shock_col = _find_column(df, SHOCK_COL_CANDIDATES)
     info["shock_col"] = shock_col
+
+    pin_position_col = _find_column(df, PIN_POSITION_COL_CANDIDATES)
+    info["pin_position_col"] = pin_position_col
+
+    rear_lift_col = _find_column(df, REAR_LIFT_COL_CANDIDATES)
+    info["rear_lift_col"] = rear_lift_col
 
     if shock_col:
         info["shocks"] = sorted(df[shock_col].dropna().unique().tolist())
@@ -278,9 +301,43 @@ def analyze_input(df):
     return info
 
 
+def build_in_the_box(vdf_for_sku, qty_col):
+    parts = vdf_for_sku[["Part Name", qty_col]].drop_duplicates("Part Name").sort_values("Part Name")
+    lines = []
+    for _, r in parts.iterrows():
+        nm = str(r["Part Name"]).strip() if pd.notna(r["Part Name"]) else "Hardware"
+        qv = int(r[qty_col]) if pd.notna(r[qty_col]) and r[qty_col] != 0 else 1
+        lines.append(f"{qv} | {nm}")
+    return " | ".join(lines)
+
+
+def build_product_metafields(vdf, lift_col, qty_col):
+    heights = []
+    if lift_col and lift_col in vdf.columns:
+        for v in vdf[lift_col].unique():
+            v = clean_str(v)
+            if v:
+                heights.append(f"{v} inch")
+    heights = sorted(set(heights), key=lambda x: float(x.replace(" inch", "")) if x.replace(" inch", "").replace(".", "").isdigit() else 0)
+
+    loads = []
+    if "Front Load" in vdf.columns:
+        for v in vdf["Front Load"].unique():
+            v = clean_str(v)
+            if v and v not in ("N/A", "NONE"):
+                loads.append(v)
+    loads = sorted(set(loads))
+
+    import json
+    height_json = json.dumps(heights) if heights else ""
+    load_json = json.dumps(loads) if loads else ""
+
+    return height_json, load_json
+
+
 def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                           product_type="Lift Kits", lift_col=None, shock_col=None,
-                          qty_col=None):
+                          pin_position_col=None, rear_lift_col=None, qty_col=None):
     if qty_col is None:
         if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
             qty_col = "Qty Customer"
@@ -294,6 +351,12 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
     if shock_col is None:
         shock_col = _find_column(df, SHOCK_COL_CANDIDATES)
+
+    if pin_position_col is None:
+        pin_position_col = _find_column(df, PIN_POSITION_COL_CANDIDATES)
+
+    if rear_lift_col is None:
+        rear_lift_col = _find_column(df, REAR_LIFT_COL_CANDIDATES)
 
     for c in ["Make", "Model", "Year", "Brand"]:
         if c in df.columns:
@@ -342,11 +405,17 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         if lift_col and lift_col in vdf.columns:
             group_cols = [lift_col, "Parent Sku"]
 
-        vars_df = vdf.groupby(group_cols, as_index=False).agg({
+        agg_dict = {
             "Total Price": "first",
             "Front Load": "first",
             "Rear Load": "first",
-        })
+        }
+        if pin_position_col and pin_position_col in vdf.columns:
+            agg_dict[pin_position_col] = "first"
+        if rear_lift_col and rear_lift_col in vdf.columns:
+            agg_dict[rear_lift_col] = "first"
+
+        vars_df = vdf.groupby(group_cols, as_index=False).agg(agg_dict)
 
         if lift_col and lift_col in vdf.columns:
             vars_df["_lift_val"] = vars_df[lift_col].apply(
@@ -371,6 +440,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
         vars_df = sort_variants(vars_df)
 
+        height_json, load_json = build_product_metafields(vdf, lift_col, qty_col)
+
         product_row = blank_row()
         product_row.update({
             "Handle": handle,
@@ -386,6 +457,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             "Published At": pub_at,
             "Published Scope": "global",
             "Gift Card": "FALSE",
+            "Metafield: custom.height [list.single_line_text_field]": height_json,
+            "Metafield: custom.load [list.single_line_text_field]": load_json,
         })
 
         variant_rows = []
@@ -394,6 +467,20 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             lift_val = row["_lift_val"] if row["_lift_val"] else ""
             front_val = row["_front_val"]
             rear_val = row["_rear_val"]
+
+            sku = clean_str(row["Parent Sku"])
+            sku_rows = vdf[vdf["Parent Sku"].astype(str).str.strip() == sku]
+            in_the_box = build_in_the_box(sku_rows, qty_col)
+
+            height_val = clean_str(row.get(lift_col, "")) if lift_col else ""
+            rear_lift_val = clean_str(row.get(rear_lift_col, "")) if rear_lift_col else ""
+            lift_range_meta = f"{height_val}|{rear_lift_val}" if height_val or rear_lift_val else ""
+
+            shock_pos = clean_str(row.get(pin_position_col, "")) if pin_position_col else ""
+
+            vendor_lower = vendor.lower()
+            shipping_ome = "Shipping OME / Bilstein" if "old man emu" in vendor_lower or "ome" in vendor_lower or "bilstein" in vendor_lower else ""
+            shipping_dob = "Shipping Dobinsons" if "dobinsons" in vendor_lower else ""
 
             vr = blank_row()
             vr.update({
@@ -417,7 +504,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 "Option3 Value": rear_val,
                 "Variant Command": "MERGE",
                 "Variant Position": idx + 1,
-                "Variant SKU": clean_str(row["Parent Sku"]),
+                "Variant SKU": sku,
                 "Variant Weight Unit": "lb",
                 "Variant Price": price,
                 "Variant Taxable": "FALSE",
@@ -428,6 +515,11 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 "Variant Shipping Profile": "General Profile",
                 "Variant Inventory Qty": 0,
                 "Variant Inventory Adjust": 0,
+                "Variant Metafield: custom.in_the_box [multi_line_text_field]": in_the_box,
+                "Variant Metafield: custom.lift_range [single_line_text_field]": lift_range_meta,
+                "Variant Metafield: custom.shock_position [single_line_text_field]": shock_pos,
+                "Variant Metafield: custom.shipping_ome_bilstein [single_line_text_field]": shipping_ome,
+                "Variant Metafield: custom.shipping_dobinsons [single_line_text_field]": shipping_dob,
             })
             variant_rows.append(vr)
 

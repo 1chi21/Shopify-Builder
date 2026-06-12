@@ -29,6 +29,21 @@ Columnas requeridas en `SuspensionConfigurator.xlsx`:
 | Rear Load | Carga trasera (Standard, Medium, Heavy, etc.) |
 | Height / Lift Height | Altura del lift (opcional, se puede extraer del SKU) |
 | Shock / Shock Type | Tipo de shock (opcional, cada shock genera un producto separado) |
+| Pin Position for Install | Posición del pin para instalación (metafield shock_position) |
+| Rear Lift | Rear lift height (metafield lift_range) |
+
+## Metafields incluidos
+
+### Metafields de producto
+- `custom.height` - Lista JSON de alturas disponibles (ej: `["2 inch","2.5 inch","3 inch"]`)
+- `custom.load` - Lista JSON de cargas frontales (ej: `["Standard","Medium","Heavy"]`)
+
+### Metafields de variante
+- `custom.in_the_box` - Contenido de la variante (Part Names + Qty)
+- `custom.lift_range` - Rango de lift en formato "Height|Rear Lift"
+- `custom.shock_position` - Posición del pin (de columna "Pin Position for Install")
+- `custom.shipping_ome_bilstein` - "Shipping OME / Bilstein" si vendor es OME/Bilstein
+- `custom.shipping_dobinsons` - "Shipping Dobinsons" si vendor es Dobinsons
 
 ## Características
 
@@ -55,6 +70,15 @@ streamlit run app.py
 5. Deploy automático en cada push
 
 ## Changelog
+
+### v1.3.0 (2026-06-10)
+- **Metafields de producto**: `custom.height` y `custom.load`
+- **Metafields de variante**: `custom.in_the_box`, `custom.lift_range`, `custom.shock_position`, `custom.shipping_ome_bilstein`, `custom.shipping_dobinsons`
+- **Detección automática** de columnas "Pin Position for Install" y "Rear Lift"
+- **Shipping automático** según vendor
+
+### v1.2.0 (2026-06-10)
+- **Años abreviados en título**: "2024-2026" → "(24-26)"
 
 ### v1.1.0 (2026-06-10)
 - **Shock como diferenciador de producto**: Cada tipo de shock ahora genera un producto separado
