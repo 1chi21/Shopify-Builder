@@ -246,7 +246,7 @@ def build_title(brand, shock_name, lift_range, model, year):
     
     shock = shock_name if shock_name else ""
     
-    lift_clean = lift_range.replace(" inch", "-inch") if lift_range else ""
+    lift_clean = lift_range if lift_range else ""
     
     model_clean = model
     year_abbr = abbreviate_year(year) if year else ""
