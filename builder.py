@@ -812,14 +812,13 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             sku = clean_str(row["Parent Sku"])
             sku_rows = vdf[vdf["Parent Sku"].astype(str).str.strip() == sku]
             
-            lift_val = row["_lift_val"].replace(" inches", "") if row["_lift_val"] else ""
             gen_val_var = clean_str(row.get(gen_col, "")) if gen_col and gen_col in row else ""
             engine_val_var = clean_str(row.get(engine_col, "")) if engine_col and engine_col in row else ""
             drive_val_var = clean_str(row.get(drive_col, "")) if drive_col and drive_col in row else ""
             trim_val_var = clean_str(row.get(trim_col, "")) if trim_col and trim_col in row else ""
             
             gmc_title = build_gmc_title(
-                sku_rows, brand, shock_name, lift_val, 
+                sku_rows, brand, shock_name, lift_range, 
                 model, year, gen_val_var, engine_val_var, drive_val_var, 
                 trim_val_var, type_col
             )
