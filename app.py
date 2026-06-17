@@ -2,9 +2,17 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only
 
-APP_VERSION = "1.8.3"
+APP_VERSION = "1.8.5"
 
 CHANGELOG = """
+### v1.8.5 (2026-06-17)
+- **Leveling Kit por variante**: Cada variante ahora detecta su tipo (Leveling/Lift) desde la columna "Internal Type" de su SKU
+- **GMC Title correcto por variante**: Variantes con "Leveling" en Internal Type ahora muestran "Leveling Kit" en el título
+
+### v1.8.4 (2026-06-17)
+- **Leveling Kit detection**: Si el producto es "Leveling Kit" (en Internal Type o Type), el título ahora dice "Leveling Kit" en lugar de "Lift Kit"
+- **Aplica a SEO Title y GMC Title**: Ambas pestañas generan el tipo de kit correcto
+
 ### v1.8.3 (2026-06-17)
 - **Drive como diferenciador de producto**: Variantes con diferente Drive (4WD, 2WD, Both, etc.) ahora se separan en productos diferentes
 - **Handle incluye Drive**: El handle ahora también incluye el Drive al final (ej: `-4wd`, `-2wd`)

@@ -532,6 +532,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             agg_dict[drive_col] = "first"
         if trim_col and trim_col in vdf.columns:
             agg_dict[trim_col] = "first"
+        # Agregar Internal Type para detectar Leveling Kit vs Lift Kit por variante
+        if "Internal Type" in vdf.columns:
+            agg_dict["Internal Type"] = "first"
 
         vars_df = vdf.groupby(group_cols, as_index=False).agg(agg_dict)
 
@@ -624,11 +627,12 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             engine_val_var = clean_str(row.get(engine_col, "")) if engine_col and engine_col in row else ""
             drive_val_var = clean_str(row.get(drive_col, "")) if drive_col and drive_col in row else ""
             trim_val_var = clean_str(row.get(trim_col, "")) if trim_col and trim_col in row else ""
+            internal_type_var = clean_str(row.get("Internal Type", "")) if "Internal Type" in row else ""
             
             gmc_title = build_gmc_title(
                 sku_rows, brand, shock_name, lift_val.replace(" inches", ""), 
                 model, year, gen_val_var, engine_val_var, drive_val_var, 
-                trim_val_var, type_col
+                trim_val_var, type_col, internal_type=internal_type_var
             )
 
             vr = blank_row()
@@ -832,6 +836,9 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             agg_dict[drive_col] = "first"
         if trim_col and trim_col in vdf.columns:
             agg_dict[trim_col] = "first"
+        # Agregar Internal Type para detectar Leveling Kit vs Lift Kit por variante
+        if "Internal Type" in vdf.columns:
+            agg_dict["Internal Type"] = "first"
         
         vars_df = vdf.groupby(group_cols, as_index=False).agg(agg_dict)
         
@@ -850,11 +857,12 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             engine_val_var = clean_str(row.get(engine_col, "")) if engine_col and engine_col in row else ""
             drive_val_var = clean_str(row.get(drive_col, "")) if drive_col and drive_col in row else ""
             trim_val_var = clean_str(row.get(trim_col, "")) if trim_col and trim_col in row else ""
+            internal_type_var = clean_str(row.get("Internal Type", "")) if "Internal Type" in row else ""
             
             gmc_title = build_gmc_title(
                 sku_rows, brand, shock_name, lift_range, 
                 model, year, gen_val_var, engine_val_var, drive_val_var, 
-                trim_val_var, type_col
+                trim_val_var, type_col, internal_type=internal_type_var
             )
             
             variant_row = {

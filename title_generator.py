@@ -93,19 +93,55 @@ def has_leaf_springs(vdf_for_product, type_col):
     return False
 
 
-def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year, gen, trim):
+def determine_kit_type(internal_type_value=None, vdf_for_product=None, type_col=None):
+    """
+    Determina si el producto es un "Leveling Kit" o "Lift Kit"
+    basándose en el valor de Internal Type o buscando en el DataFrame.
+    Retorna "Leveling Kit" si detecta "Leveling", "Lift Kit" en caso contrario.
+    """
+    # Si se pasa el valor directo de Internal Type, usarlo
+    if internal_type_value is not None and not pd.isna(internal_type_value):
+        if "leveling" in str(internal_type_value).lower():
+            return "Leveling Kit"
+        else:
+            return "Lift Kit"
+    
+    # Si no, buscar en el DataFrame
+    if vdf_for_product is None or len(vdf_for_product) == 0:
+        return "Lift Kit"
+    
+    # Buscar en columnas relevantes
+    columns_to_check = ["Type", "Internal Type", "Product Type", "Platform"]
+    if type_col:
+        columns_to_check.insert(0, type_col)
+    
+    for col in columns_to_check:
+        if col in vdf_for_product.columns:
+            values = vdf_for_product[col].dropna().astype(str).str.lower()
+            for val in values:
+                if "leveling" in val:
+                    return "Leveling Kit"
+    
+    return "Lift Kit"
+
+
+def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year, gen, trim, type_col=None):
     """
     Genera SEO Title según reglas de Carlos
-    Formato: MARCA_ABREVIADA SHOCK GENERACIÓN MODELO [TRIM] Lift Kit RANGO_ALTURAS (AÑOS)
+    Formato: MARCA_ABREVIADA SHOCK GENERACIÓN MODELO [TRIM] [LIFT/LEVELING Kit] RANGO_ALTURAS (AÑOS)
     Máximo: 70 caracteres (nivel producto)
     
     Ejemplo: "OME BP-51 5th Gen 4Runner Lift Kit 2-3" (2010-2024)"
+    Ejemplo Leveling: "OME Nitro 3rd Gen 4Runner Leveling Kit 2" (1996-2002)"
     """
     brand_abbr = get_shock_abbreviation(brand, shock_type)
     shock = normalize_shock_name(shock_type)
     generation = get_generation(gen)
     model_clean = clean_str(model) if model else ""
     trim_clean = clean_str(trim) if trim else ""
+    
+    # Determinar si es Leveling Kit o Lift Kit
+    kit_type = determine_kit_type(vdf_for_product=vdf_for_product, type_col=type_col)
     
     # Convertir rango de alturas a formato con comillas
     # Ejemplo: "2-3 inch" -> "2-3""
@@ -118,7 +154,7 @@ def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year,
     parts = [brand_abbr, shock, generation, model_clean]
     if trim_clean:
         parts.append(trim_clean)
-    parts.extend(["Lift Kit", lift_formatted, year_formatted])
+    parts.extend([kit_type, lift_formatted, year_formatted])
     
     # Filtrar partes vacías
     parts = [p for p in parts if p]
@@ -145,14 +181,16 @@ def build_gmc_title(
     drive,
     trim,
     type_col,
+    internal_type=None,
 ):
     """
     Genera GMC Title según reglas de Carlos
-    Formato: BRAND SHOCK GENERACIÓN MODELO [ENGINE] [DRIVE] [TRIM] Lift Kit RANGO_ALTURAS (AÑOS), 
+    Formato: BRAND SHOCK GENERACIÓN MODELO [ENGINE] [DRIVE] [TRIM] [LIFT/LEVELING Kit] RANGO_ALTURAS (AÑOS), 
              MARCA_ABREVIADA TECNOLOGÍA_SHOCK, [SHOCK_ARCHITECTURE], [LEAF_SPRINGS], Suspension Upgrade
     Máximo: 150 caracteres (nivel variante)
     
     Ejemplo: "Old Man Emu MT64 5th Gen 4Runner Lift Kit 2-3" (2010-2024), OME Monotube Shocks, Suspension Upgrade"
+    Ejemplo Leveling: "Old Man Emu Nitro 3rd Gen 4Runner Leveling Kit 2" (1996-2002), OME Twin Tube Shocks, Suspension Upgrade"
     """
     brand_clean = clean_str(brand) if brand else ""
     shock = normalize_shock_name(shock_type)
@@ -161,6 +199,10 @@ def build_gmc_title(
     engine_clean = clean_str(engine) if engine else ""
     drive_clean = clean_str(drive) if drive else ""
     trim_clean = clean_str(trim) if trim else ""
+    
+    # Determinar si es Leveling Kit o Lift Kit
+    # Primero intentar con el internal_type de la variante, luego con el DataFrame
+    kit_type = determine_kit_type(internal_type_value=internal_type, vdf_for_product=vdf_for_variant, type_col=type_col)
     
     # Convertir rango de alturas a formato con comillas
     lift_formatted = lift_range.replace(" inch", '"') if lift_range else ""
@@ -177,7 +219,7 @@ def build_gmc_title(
         parts.append(drive_clean)
     if trim_clean:
         parts.append(trim_clean)
-    parts.extend(["Lift Kit", lift_formatted, year_formatted])
+    parts.extend([kit_type, lift_formatted, year_formatted])
     
     # Filtrar partes vacías
     parts = [p for p in parts if p]
