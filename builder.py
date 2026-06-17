@@ -710,6 +710,10 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         has_v = has_v & (df["Model"] != "")
     df = df[has_v].copy()
     
+    # Normalizar columna de lift height para evitar errores de tipo mixto
+    if lift_col and lift_col in df.columns:
+        df[lift_col] = df[lift_col].apply(normalize_lift_value)
+    
     # Agrupar por vehículo + shock
     df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
     if shock_col and shock_col in df.columns:

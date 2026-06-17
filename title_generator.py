@@ -143,10 +143,7 @@ def build_gmc_title(
     # Construir primera parte del título
     parts = [brand_clean, shock, generation, model_clean]
     if engine_clean:
-        engine_lower = engine_clean.lower()
-        # solo para ser espcificos en diesel or hybrid
-        if "diesel" in engine_lower or "hybrid" in engine_lower:
-            parts.append(engine_clean)
+        parts.append(engine_clean)
     if drive_clean:
         parts.append(drive_clean)
     if trim_clean:
