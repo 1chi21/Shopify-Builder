@@ -215,8 +215,18 @@ def build_title(brand, shock_name, lift_range, model, year):
     return " ".join(parts)
 
 
-def build_handle(title):
-    return re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+def build_handle(title, trim=""):
+    """
+    Genera el handle (URL slug) del producto.
+    Si se proporciona un trim, se agrega al final del handle
+    para diferenciar productos con diferente trim (ej: V8, KDSS).
+    """
+    handle = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+    if trim and trim.strip():
+        trim_slug = re.sub(r'[^a-z0-9]+', '-', trim.lower()).strip('-')
+        if trim_slug:
+            handle = f"{handle}-{trim_slug}"
+    return handle
 
 
 def sort_variants(vars_df):
@@ -462,6 +472,10 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
     df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
     if shock_col and shock_col in df.columns:
         df["_veh"] = df["_veh"] + "|" + df[shock_col].astype(str)
+    if trim_col and trim_col in df.columns:
+        # Solo agregar Trim si tiene valor (no vacío/NaN)
+        # Si dos variantes tienen diferente Trim, serán productos separados
+        df["_veh"] = df["_veh"] + "|" + df[trim_col].apply(clean_str).replace("", "_NONE_")
     vehicles = sorted(df["_veh"].unique())
 
     all_product_rows = []
@@ -482,7 +496,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         model = clean_str(first.get("Model", ""))
         year = clean_str(first.get("Year", ""))
         title = build_title(brand, shock_name, lift_range, model, year)
-        handle = build_handle(title)
+        trim_val_handle = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
+        handle = build_handle(title, trim=trim_val_handle)
         pub_at = now_timestamp()
         body_html = build_body_html(vdf, qty_col)
 
@@ -734,10 +749,14 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
     if "Total Price" in df.columns:
         df["Total Price"] = pd.to_numeric(df["Total Price"], errors='coerce')
     
-    # Agrupar por vehículo + shock
+    # Agrupar por vehículo + shock + trim
     df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
     if shock_col and shock_col in df.columns:
         df["_veh"] = df["_veh"] + "|" + df[shock_col].astype(str)
+    if trim_col and trim_col in df.columns:
+        # Solo agregar Trim si tiene valor (no vacío/NaN)
+        # Si dos variantes tienen diferente Trim, serán productos separados
+        df["_veh"] = df["_veh"] + "|" + df[trim_col].apply(clean_str).replace("", "_NONE_")
     vehicles = sorted(df["_veh"].unique())
     
     all_rows = []
@@ -770,7 +789,8 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         
         # Generar handle (necesario para identificar el producto)
         title = build_title(brand, shock_name, lift_range, model, year)
-        handle = build_handle(title)
+        trim_val_handle = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
+        handle = build_handle(title, trim=trim_val_handle)
         
         # Fila de producto con SEO Title
         product_row = {
