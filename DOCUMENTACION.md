@@ -160,6 +160,19 @@ in_the_box = build_in_the_box(sku_rows, qty_col, position_col, type_col, part_sk
 
 ## Estructura del Código
 
+### Archivos Principales
+
+| Archivo | Propósito |
+|---------|-----------|
+| `app.py` | Interfaz web de Streamlit, configuración de UI |
+| `builder.py` | Lógica core de procesamiento y generación |
+| `title_generator.py` | Funciones para generar SEO Title y GMC Title |
+| `title_rules.py` | Mapeos y reglas para generación de títulos SEO/GMC |
+| `utils.py` | Funciones utilitarias compartidas (clean_str, build_lift_range) |
+| `requirements.txt` | Dependencias de Python |
+| `README.md` | Documentación básica de uso |
+| `DOCUMENTACION.md` | Documentación técnica completa |
+
 ### builder.py - Funciones Core
 
 #### Funciones de Detección
@@ -239,6 +252,63 @@ build_matrixify_excel(df, tags, status, product_type, lift_col, shock_col, ...)
 ```
 Orquesta todo el proceso de generación del Excel.
 
+### title_generator.py - Generación de Títulos SEO/GMC
+
+#### Funciones de Generación
+```python
+build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year, gen, trim)
+```
+Genera SEO Title según reglas de Carlos (máximo 70 caracteres, nivel producto).
+
+```python
+build_gmc_title(vdf_for_variant, brand, shock_type, lift_range, model, year, gen, engine, drive, trim, type_col)
+```
+Genera GMC Title según reglas de Carlos (máximo 150 caracteres, nivel variante).
+
+#### Funciones Auxiliares
+```python
+get_generation(gen_value)
+```
+Convierte el valor de Gen a formato legible (ej: "5thGen" → "5th Gen").
+
+```python
+get_shock_abbreviation(brand, shock_type)
+```
+Obtiene la abreviación de marca (ej: "Old Man Emu" → "OME").
+
+```python
+get_shock_technology(shock_type)
+```
+Obtiene la tecnología y arquitectura del shock.
+
+```python
+has_leaf_springs(vdf_for_product, type_col)
+```
+Verifica si el producto tiene leaf springs.
+
+### title_rules.py - Reglas de Configuración
+
+Contiene los mapeos y constantes:
+- `SHOCK_ABBREVIATIONS`: Mapeo de marcas a abreviaciones
+- `SHOCK_TECHNOLOGY`: Mapeo de shocks a tecnologías y arquitecturas
+- `GENERATION_MAP`: Mapeo de generaciones
+- `SEO_TITLE_MAX_LENGTH`: Límite de caracteres para SEO Title (70)
+- `GMC_TITLE_MAX_LENGTH`: Límite de caracteres para GMC Title (150)
+- `GMC_ALTERNATIVE_TEXT`: Texto alternativo cuando GMC Title supera límite
+
+### utils.py - Funciones Utilitarias
+
+Contiene funciones compartidas entre módulos:
+```python
+clean_str(val)
+```
+Limpia strings: convierte NaN, None, "N/A", "" a string vacío.
+
+```python
+build_lift_range(lift_values)
+```
+Calcula el rango total de alturas (ej: ["0-2", "3-4", "5-6"] → "0-6 inch").
+
 ---
 
 ## Formato de Datos
@@ -270,6 +340,10 @@ Orquesta todo el proceso de generación del Excel.
 | Pin Position for Install | Posición del pin | 1 |
 | Rear Lift | Rear lift height | 0-1 |
 | Color | Color del producto | Black |
+| Gen | Generación del vehículo | 5thGen |
+| Engine | Tipo de motor | Gas |
+| Drive | Tipo de tracción | 4WD |
+| Trim | Trim del vehículo | w/ KDSS |
 
 ### Archivo de Salida (matrixify_products.xlsx)
 
@@ -318,6 +392,14 @@ Orquesta todo el proceso de generación del Excel.
 - **Propósito:** Colores disponibles (solo para Dobinsons)
 - **Regla:** Solo se genera si vendor contiene "dobinsons"
 
+#### title_tag (SEO Title)
+- **Tipo:** string
+- **Formato:** `MARCA_ABREVIADA SHOCK GENERACIÓN MODELO [TRIM] Lift Kit RANGO_ALTURAS (AÑOS)`
+- **Ejemplo:** `OME BP-51 5th Gen 4Runner Lift Kit 2-3" (2010-2024)`
+- **Propósito:** Título SEO para Google (máximo 70 caracteres)
+- **Regla:** Solo se genera para productos Old Man Emu
+- **Columnas requeridas:** Gen, Trim (opcionales)
+
 ### Metafields de Variante
 
 #### custom.in_the_box
@@ -346,6 +428,76 @@ Orquesta todo el proceso de generación del Excel.
 - **Tipo:** single_line_text_field
 - **Valor:** `Shipping Dobinsons`
 - **Regla:** Solo se llena si vendor contiene "dobinsons"
+
+#### custom.gmc_title (GMC Title)
+- **Tipo:** single_line_text_field
+- **Formato:** `BRAND SHOCK GENERACIÓN MODELO [ENGINE] [DRIVE] [TRIM] Lift Kit RANGO_ALTURAS (AÑOS), MARCA_ABREVIADA TECNOLOGÍA_SHOCK, [SHOCK_ARCHITECTURE], [LEAF_SPRINGS], Suspension Upgrade`
+- **Ejemplo:** `Old Man Emu MT64 5th Gen 4Runner Lift Kit 2-3" (2010-2024), OME Monotube Shocks, Suspension Upgrade`
+- **Propósito:** Título para Google Merchant Center (máximo 150 caracteres)
+- **Regla:** Solo se genera para productos Old Man Emu
+- **Columnas requeridas:** Gen, Engine, Drive, Trim (opcionales)
+- **Límite:** Si supera 150 caracteres, se quita "Suspension Upgrade". Si aún supera, se marca con advertencia.
+
+---
+
+## Reglas de Generación de Títulos SEO/GMC
+
+### Archivos de Configuración
+
+- **title_rules.py:** Contiene los mapeos de shocks a tecnologías y arquitecturas
+- **title_generator.py:** Contiene las funciones `build_seo_title` y `build_gmc_title`
+
+### Mapeo de Shocks a Tecnologías
+
+| Shock | Tecnología | Arquitectura |
+|-------|-----------|--------------|
+| BP-51 | Bypass Shocks | Remote Reservoir, Adjustable Coilover |
+| MT64 | Monotube Shocks | - |
+| Nitrocharger | Twin Tube Shocks | - |
+| Nitro | Twin Tube Shocks | - |
+
+### Mapeo de Generaciones
+
+| Gen (Input) | Formato (Output) |
+|-------------|------------------|
+| 5thGen | 5th Gen |
+| 4thGen | 4th Gen |
+| 3rdGen | 3rd Gen |
+| 2ndGen | 2nd Gen |
+| 1stGen | 1st Gen |
+| 2nd & 3rd Gen | 2nd & 3rd Gen |
+
+### Reglas de SEO Title (Nivel Producto)
+
+**Formato:** `MARCA_ABREVIADA SHOCK GENERACIÓN MODELO [TRIM] Lift Kit RANGO_ALTURAS (AÑOS)`
+
+**Ejemplos:**
+- `OME BP-51 5th Gen 4Runner Lift Kit 2-3.5" (2010-2024)` - 53 chars
+- `OME MT64 5th Gen 4Runner Lift Kit 2-3" (2010-2024)` - 50 chars
+- `OME Nitrocharger 5th Gen 4Runner w/ KDSS Lift Kit 2-3" (2010-2024)` - 66 chars
+
+**Límite:** 70 caracteres máximo
+
+### Reglas de GMC Title (Nivel Variante)
+
+**Formato:** `BRAND SHOCK GENERACIÓN MODELO [ENGINE] [DRIVE] [TRIM] Lift Kit RANGO_ALTURAS (AÑOS), MARCA_ABREVIADA TECNOLOGÍA_SHOCK, [SHOCK_ARCHITECTURE], [LEAF_SPRINGS], Suspension Upgrade`
+
+**Ejemplos:**
+- `Old Man Emu MT64 5th Gen 4Runner Lift Kit 2-3" (2010-2024), OME Monotube Shocks, Suspension Upgrade` - 99 chars
+- `Old Man Emu BP-51 5th Gen 4Runner w/ KDSS Lift Kit 2-3" (2010-2024), OME Bypass Shocks, Remote Reservoir, Adjustable Coilovers, Suspension Upgrade` - 146 chars
+
+**Límite:** 150 caracteres máximo
+- Si supera 150 caracteres → quitar "Suspension Upgrade"
+- Si aún supera → marcar con advertencia `[EXCEDE 150 CHARS]`
+
+### Detección de Leaf Springs
+
+La función `has_leaf_springs()` busca en la columna `Type` valores que contengan:
+- "leaf"
+- "leaf spring"
+- "rear leaf"
+
+Si encuentra alguno, agrega "Rear Leaf Springs" al GMC Title.
 
 ---
 
@@ -554,7 +706,18 @@ else:
 
 ## Versiones y Changelog
 
-### v1.6.7 (2026-06-10) - Versión Actual
+### v1.7.0 (2026-06-17) - Versión Actual
+- **SEO Title**: Nuevo metafield `title_tag` generado según reglas de Carlos (máximo 70 caracteres, nivel producto)
+- **GMC Title**: Nuevo metafield `custom.gmc_title` generado según reglas de Carlos (máximo 150 caracteres, nivel variante)
+- **Nuevos archivos**: `title_generator.py`, `title_rules.py`, `utils.py` para generación de títulos SEO/GMC
+- **Detección de columnas**: Gen, Engine, Drive, Trim para generación de títulos SEO/GMC
+- **Solo para Old Man Emu**: Por ahora solo aplica a productos OME
+- **Refactorización**: Movidas funciones `clean_str` y `build_lift_range` a `utils.py` para evitar importación circular
+
+### v1.6.8 (2026-06-10)
+- **Título corregido**: "inch" ahora aparece separado por espacio en lugar de guión
+
+### v1.6.7 (2026-06-10)
 - **Variantes corregidas**: Option1 Value ahora muestra rangos completos como "0-2 inches", "3-4 inches", "5-6 inches"
 - **Título con rango total**: Muestra el rango mínimo-máximo de todas las variantes (ej: "0-6 inch")
 

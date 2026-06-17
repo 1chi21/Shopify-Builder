@@ -3,6 +3,8 @@ import numpy as np
 import re
 import io
 from datetime import datetime, timezone
+from title_generator import build_seo_title, build_gmc_title
+from utils import clean_str, build_lift_range
 
 
 FRONT_LOAD_MAP = {
@@ -60,6 +62,8 @@ COLS = [
     "Metafield: custom.height [list.single_line_text_field]",
     "Metafield: custom.load [list.single_line_text_field]",
     "Metafield: custom.color [list.single_line_text_field]",
+    "Metafield: title_tag [string]",
+    "Variant Metafield: custom.gmc_title [single_line_text_field]",
     "Variant Metafield: custom.in_the_box [multi_line_text_field]",
     "Variant Metafield: custom.lift_range [single_line_text_field]",
     "Variant Metafield: custom.shock_position [single_line_text_field]",
@@ -129,15 +133,6 @@ def blank_row():
     return {c: "" for c in COLS}
 
 
-def clean_str(val):
-    if pd.isna(val):
-        return ""
-    s = str(val).strip()
-    if s.lower() in ("nan", "none", "n/a", ""):
-        return ""
-    return s
-
-
 def normalize_lift_value(val):
     if pd.isna(val):
         return ""
@@ -181,41 +176,6 @@ def extract_lift_from_sku(sku):
             return f"{int(val)} inches"
         return f"{val} inches"
     return None
-
-
-def build_lift_range(lift_values):
-    nums = []
-    for v in lift_values:
-        v = clean_str(v)
-        if not v:
-            continue
-        # Limpiar el valor de cualquier texto adicional
-        v = v.replace(" inches", "").replace(" inch", "").strip()
-        # Extraer TODOS los números del valor (para rangos como "0-2" extraer 0 y 2)
-        matches = re.findall(r'(\d+\.?\d*)', v)
-        for match in matches:
-            try:
-                nums.append(float(match))
-            except:
-                pass
-    if not nums:
-        return ""
-    nums = sorted(set(nums))
-    min_v = nums[0]
-    max_v = nums[-1]
-    if min_v == max_v:
-        if min_v == int(min_v):
-            return f"{int(min_v)} inch"
-        return f"{min_v} inch"
-    if min_v == int(min_v):
-        min_s = str(int(min_v))
-    else:
-        min_s = str(min_v)
-    if max_v == int(max_v):
-        max_s = str(int(max_v))
-    else:
-        max_s = str(max_v)
-    return f"{min_s}-{max_s} inch"
 
 
 def build_body_html(parts_df, qty_col):
@@ -298,6 +258,10 @@ def analyze_input(df):
         "position_col": None,
         "type_col": None,
         "qty_col": None,
+        "gen_col": None,
+        "engine_col": None,
+        "drive_col": None,
+        "trim_col": None,
     }
 
     if "Brand" in df.columns:
@@ -326,6 +290,16 @@ def analyze_input(df):
 
     type_col = _find_column(df, TYPE_COL_CANDIDATES)
     info["type_col"] = type_col
+
+    # Detectar columnas para SEO/GMC titles
+    if "Gen" in df.columns:
+        info["gen_col"] = "Gen"
+    if "Engine" in df.columns:
+        info["engine_col"] = "Engine"
+    if "Drive" in df.columns:
+        info["drive_col"] = "Drive"
+    if "Trim" in df.columns:
+        info["trim_col"] = "Trim"
 
     if shock_col:
         info["shocks"] = sorted([str(s) for s in df[shock_col].dropna().unique().tolist()])
@@ -424,7 +398,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                           product_type="Lift Kits", lift_col=None, shock_col=None,
                           pin_position_col=None, rear_lift_col=None, color_col=None,
                           part_sku_col=None, position_col=None, type_col=None,
-                          qty_col=None):
+                          qty_col=None, gen_col=None, engine_col=None, 
+                          drive_col=None, trim_col=None):
     if qty_col is None:
         if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
             qty_col = "Qty Customer"
@@ -456,6 +431,16 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
     if type_col is None:
         type_col = _find_column(df, TYPE_COL_CANDIDATES)
+
+    # Detectar columnas para SEO/GMC titles si no se proporcionan
+    if gen_col is None and "Gen" in df.columns:
+        gen_col = "Gen"
+    if engine_col is None and "Engine" in df.columns:
+        engine_col = "Engine"
+    if drive_col is None and "Drive" in df.columns:
+        drive_col = "Drive"
+    if trim_col is None and "Trim" in df.columns:
+        trim_col = "Trim"
 
     for c in ["Make", "Model", "Year", "Brand"]:
         if c in df.columns:
@@ -514,6 +499,15 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             agg_dict[pin_position_col] = "first"
         if rear_lift_col and rear_lift_col in vdf.columns:
             agg_dict[rear_lift_col] = "first"
+        # Agregar columnas para SEO/GMC titles
+        if gen_col and gen_col in vdf.columns:
+            agg_dict[gen_col] = "first"
+        if engine_col and engine_col in vdf.columns:
+            agg_dict[engine_col] = "first"
+        if drive_col and drive_col in vdf.columns:
+            agg_dict[drive_col] = "first"
+        if trim_col and trim_col in vdf.columns:
+            agg_dict[trim_col] = "first"
 
         vars_df = vdf.groupby(group_cols, as_index=False).agg(agg_dict)
 
@@ -547,6 +541,17 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             colors = [clean_str(c) for c in vdf[color_col].unique() if clean_str(c)]
             color_str = ";".join(sorted(set(colors)))
 
+        # Generar SEO Title (nivel producto)
+        gen_val = clean_str(first.get(gen_col, "")) if gen_col and gen_col in vdf.columns else ""
+        engine_val = clean_str(first.get(engine_col, "")) if engine_col and engine_col in vdf.columns else ""
+        drive_val = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
+        trim_val = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
+        
+        seo_title = build_seo_title(
+            vdf, brand, shock_name, lift_range, model, year, 
+            gen_val, trim_val
+        )
+
         product_row = blank_row()
         product_row.update({
             "Handle": handle,
@@ -565,6 +570,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             "Metafield: custom.height [list.single_line_text_field]": height_str,
             "Metafield: custom.load [list.single_line_text_field]": load_str,
             "Metafield: custom.color [list.single_line_text_field]": color_str,
+            "Metafield: title_tag [string]": seo_title,
         })
 
         variant_rows = []
@@ -588,6 +594,18 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             vendor_lower = vendor.lower()
             shipping_ome = "Shipping OME / Bilstein" if "old man emu" in vendor_lower or "ome" in vendor_lower or "bilstein" in vendor_lower else ""
             shipping_dob = "Shipping Dobinsons" if "dobinsons" in vendor_lower else ""
+
+            # Generar GMC Title (nivel variante)
+            gen_val_var = clean_str(row.get(gen_col, "")) if gen_col and gen_col in row else ""
+            engine_val_var = clean_str(row.get(engine_col, "")) if engine_col and engine_col in row else ""
+            drive_val_var = clean_str(row.get(drive_col, "")) if drive_col and drive_col in row else ""
+            trim_val_var = clean_str(row.get(trim_col, "")) if trim_col and trim_col in row else ""
+            
+            gmc_title = build_gmc_title(
+                sku_rows, brand, shock_name, lift_val.replace(" inches", ""), 
+                model, year, gen_val_var, engine_val_var, drive_val_var, 
+                trim_val_var, type_col
+            )
 
             vr = blank_row()
             vr.update({
@@ -627,6 +645,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 "Variant Metafield: custom.shock_position [single_line_text_field]": shock_pos,
                 "Variant Metafield: custom.shipping_ome_bilstein [single_line_text_field]": shipping_ome,
                 "Variant Metafield: custom.shipping_dobinsons [single_line_text_field]": shipping_dob,
+                "Variant Metafield: custom.gmc_title [single_line_text_field]": gmc_title,
             })
             variant_rows.append(vr)
 
@@ -651,4 +670,159 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         result_df.to_excel(writer, sheet_name="Products", index=False)
     output.seek(0)
 
+    return output, summary, result_df
+
+
+def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None, 
+                       engine_col=None, drive_col=None, trim_col=None, type_col=None):
+    """
+    Genera un archivo Excel con SOLO los metafields SEO Title y GMC Title
+    para actualizar productos existentes en Shopify.
+    
+    Retorna: (output_bytes, summary_list, result_dataframe)
+    """
+    # Detectar columnas si no se proporcionan
+    if lift_col is None:
+        lift_col = _find_column(df, LIFT_HEIGHT_COL_CANDIDATES)
+    if shock_col is None:
+        shock_col = _find_column(df, SHOCK_COL_CANDIDATES)
+    if gen_col is None and "Gen" in df.columns:
+        gen_col = "Gen"
+    if engine_col is None and "Engine" in df.columns:
+        engine_col = "Engine"
+    if drive_col is None and "Drive" in df.columns:
+        drive_col = "Drive"
+    if trim_col is None and "Trim" in df.columns:
+        trim_col = "Trim"
+    if type_col is None:
+        type_col = _find_column(df, TYPE_COL_CANDIDATES)
+    
+    # Limpiar columnas de vehículo
+    for c in ["Make", "Model", "Year", "Brand"]:
+        if c in df.columns:
+            df[c] = df[c].apply(clean_str)
+    
+    # Filtrar filas sin Make/Model
+    has_v = pd.Series([True] * len(df), index=df.index)
+    if "Make" in df.columns:
+        has_v = has_v & (df["Make"] != "")
+    if "Model" in df.columns:
+        has_v = has_v & (df["Model"] != "")
+    df = df[has_v].copy()
+    
+    # Agrupar por vehículo + shock
+    df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
+    if shock_col and shock_col in df.columns:
+        df["_veh"] = df["_veh"] + "|" + df[shock_col].astype(str)
+    vehicles = sorted(df["_veh"].unique())
+    
+    all_rows = []
+    summary = []
+    
+    for vk in vehicles:
+        vdf = df[df["_veh"] == vk].copy()
+        first = vdf.iloc[0]
+        brand = clean_str(first.get("Brand", ""))
+        shock_name = clean_str(first.get(shock_col, "")) if shock_col else ""
+        model = clean_str(first.get("Model", ""))
+        year = clean_str(first.get("Year", ""))
+        
+        # Calcular rango de alturas
+        lift_values = []
+        if lift_col and lift_col in vdf.columns:
+            lift_values = vdf[lift_col].unique().tolist()
+        lift_range = build_lift_range(lift_values)
+        
+        # Generar SEO Title (nivel producto)
+        gen_val = clean_str(first.get(gen_col, "")) if gen_col and gen_col in vdf.columns else ""
+        engine_val = clean_str(first.get(engine_col, "")) if engine_col and engine_col in vdf.columns else ""
+        drive_val = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
+        trim_val = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
+        
+        seo_title = build_seo_title(
+            vdf, brand, shock_name, lift_range, model, year, 
+            gen_val, trim_val
+        )
+        
+        # Generar handle (necesario para identificar el producto)
+        title = build_title(brand, shock_name, lift_range, model, year)
+        handle = build_handle(title)
+        
+        # Fila de producto con SEO Title
+        product_row = {
+            "Handle": handle,
+            "Command": "UPDATE",
+            "Metafield: title_tag [string]": seo_title,
+        }
+        all_rows.append(product_row)
+        
+        # Generar GMC Title para cada variante
+        group_cols = ["Parent Sku"]
+        if lift_col and lift_col in vdf.columns:
+            group_cols = [lift_col, "Parent Sku"]
+        
+        agg_dict = {
+            "Total Price": "first",
+            "Front Load": "first",
+            "Rear Load": "first",
+        }
+        if gen_col and gen_col in vdf.columns:
+            agg_dict[gen_col] = "first"
+        if engine_col and engine_col in vdf.columns:
+            agg_dict[engine_col] = "first"
+        if drive_col and drive_col in vdf.columns:
+            agg_dict[drive_col] = "first"
+        if trim_col and trim_col in vdf.columns:
+            agg_dict[trim_col] = "first"
+        
+        vars_df = vdf.groupby(group_cols, as_index=False).agg(agg_dict)
+        
+        if lift_col and lift_col in vdf.columns:
+            vars_df["_lift_val"] = vars_df[lift_col].apply(
+                lambda x: f"{clean_str(x)} inches" if clean_str(x) else ""
+            )
+        else:
+            vars_df["_lift_val"] = vars_df["Parent Sku"].apply(extract_lift_from_sku)
+        
+        for idx, (_, row) in enumerate(vars_df.iterrows()):
+            sku = clean_str(row["Parent Sku"])
+            sku_rows = vdf[vdf["Parent Sku"].astype(str).str.strip() == sku]
+            
+            lift_val = row["_lift_val"].replace(" inches", "") if row["_lift_val"] else ""
+            gen_val_var = clean_str(row.get(gen_col, "")) if gen_col and gen_col in row else ""
+            engine_val_var = clean_str(row.get(engine_col, "")) if engine_col and engine_col in row else ""
+            drive_val_var = clean_str(row.get(drive_col, "")) if drive_col and drive_col in row else ""
+            trim_val_var = clean_str(row.get(trim_col, "")) if trim_col and trim_col in row else ""
+            
+            gmc_title = build_gmc_title(
+                sku_rows, brand, shock_name, lift_val, 
+                model, year, gen_val_var, engine_val_var, drive_val_var, 
+                trim_val_var, type_col
+            )
+            
+            variant_row = {
+                "Handle": handle,
+                "Command": "UPDATE",
+                "Variant SKU": sku,
+                "Variant Metafield: custom.gmc_title [single_line_text_field]": gmc_title,
+            }
+            all_rows.append(variant_row)
+        
+        summary.append({
+            "vehicle": vk.replace("|", " "),
+            "handle": handle,
+            "seo_title": seo_title,
+            "seo_chars": len(seo_title),
+            "variants": len(vars_df),
+        })
+    
+    # Crear DataFrame con solo las columnas necesarias
+    result_df = pd.DataFrame(all_rows)
+    
+    # Exportar a Excel
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        result_df.to_excel(writer, sheet_name="Products", index=False)
+    output.seek(0)
+    
     return output, summary, result_df

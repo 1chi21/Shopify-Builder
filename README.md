@@ -80,6 +80,17 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.8.0 (2026-06-17)
+- **Nueva pestaña "SEO & GMC Titles"**: Para actualizar títulos de productos existentes sin crear nuevos
+- **Archivo de actualización**: Genera Excel con solo Handle, Command UPDATE, y metafields SEO/GMC
+- **Verificación de límites**: Advierte cuando SEO Titles superan 70 caracteres
+
+### v1.7.0 (2026-06-17)
+- **SEO Title**: Nuevo metafield `title_tag` generado según reglas de Carlos (máximo 70 caracteres, nivel producto)
+- **GMC Title**: Nuevo metafield `custom.gmc_title` generado según reglas de Carlos (máximo 150 caracteres, nivel variante)
+- **Detección de columnas**: Gen, Engine, Drive, Trim para generación de títulos SEO/GMC
+- **Solo para Old Man Emu**: Por ahora solo aplica a productos OME
+
 ### v1.6.8 (2026-06-10)
 - **Título corregido**: "inch" ahora aparece separado por espacio en lugar de guión (ej: "0-6 inch" en lugar de "0-6-inch")
 
