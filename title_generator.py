@@ -24,6 +24,34 @@ def get_generation(gen_value):
     return GENERATION_MAP.get(gen_str, gen_str)
 
 
+def normalize_shock_name(shock_type):
+    """
+    Normaliza el nombre del shock.
+    Si dice "Nitro", lo cambia a "Nitrocharger".
+    """
+    if pd.isna(shock_type):
+        return ""
+    shock_str = str(shock_type).strip()
+    if shock_str.lower() == "nitro":
+        return "Nitrocharger"
+    return shock_str
+
+
+def should_include_engine(engine_value):
+    """
+    Determina si el engine debe incluirse en el título.
+    Si dice "Gas" (case-insensitive), NO se incluye (se sobreentiende).
+    Cualquier otro valor SÍ se incluye.
+    Retorna True si debe incluirse, False si no.
+    """
+    if pd.isna(engine_value):
+        return False
+    engine_str = str(engine_value).strip()
+    if engine_str.lower() == "gas":
+        return False
+    return True
+
+
 def get_shock_abbreviation(brand, shock_type):
     """
     Obtiene la abreviación de marca para el shock
@@ -74,7 +102,7 @@ def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year,
     Ejemplo: "OME BP-51 5th Gen 4Runner Lift Kit 2-3" (2010-2024)"
     """
     brand_abbr = get_shock_abbreviation(brand, shock_type)
-    shock = clean_str(shock_type) if shock_type else ""
+    shock = normalize_shock_name(shock_type)
     generation = get_generation(gen)
     model_clean = clean_str(model) if model else ""
     trim_clean = clean_str(trim) if trim else ""
@@ -127,7 +155,7 @@ def build_gmc_title(
     Ejemplo: "Old Man Emu MT64 5th Gen 4Runner Lift Kit 2-3" (2010-2024), OME Monotube Shocks, Suspension Upgrade"
     """
     brand_clean = clean_str(brand) if brand else ""
-    shock = clean_str(shock_type) if shock_type else ""
+    shock = normalize_shock_name(shock_type)
     generation = get_generation(gen)
     model_clean = clean_str(model) if model else ""
     engine_clean = clean_str(engine) if engine else ""
@@ -142,7 +170,8 @@ def build_gmc_title(
     
     # Construir primera parte del título
     parts = [brand_clean, shock, generation, model_clean]
-    if engine_clean:
+    # Solo incluir engine si NO es "Gas" (se sobreentiende)
+    if engine_clean and should_include_engine(engine_clean):
         parts.append(engine_clean)
     if drive_clean:
         parts.append(drive_clean)
