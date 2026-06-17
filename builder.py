@@ -714,6 +714,26 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
     if lift_col and lift_col in df.columns:
         df[lift_col] = df[lift_col].apply(normalize_lift_value)
     
+    # Normalizar columnas que se usarán en groupby para evitar errores de tipo mixto
+    if shock_col and shock_col in df.columns:
+        df[shock_col] = df[shock_col].apply(clean_str)
+    if gen_col and gen_col in df.columns:
+        df[gen_col] = df[gen_col].apply(clean_str)
+    if engine_col and engine_col in df.columns:
+        df[engine_col] = df[engine_col].apply(clean_str)
+    if drive_col and drive_col in df.columns:
+        df[drive_col] = df[drive_col].apply(clean_str)
+    if trim_col and trim_col in df.columns:
+        df[trim_col] = df[trim_col].apply(clean_str)
+    if "Parent Sku" in df.columns:
+        df["Parent Sku"] = df["Parent Sku"].apply(clean_str)
+    if "Front Load" in df.columns:
+        df["Front Load"] = df["Front Load"].apply(clean_str)
+    if "Rear Load" in df.columns:
+        df["Rear Load"] = df["Rear Load"].apply(clean_str)
+    if "Total Price" in df.columns:
+        df["Total Price"] = pd.to_numeric(df["Total Price"], errors='coerce')
+    
     # Agrupar por vehículo + shock
     df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
     if shock_col and shock_col in df.columns:
