@@ -215,17 +215,21 @@ def build_title(brand, shock_name, lift_range, model, year):
     return " ".join(parts)
 
 
-def build_handle(title, trim=""):
+def build_handle(title, trim="", drive=""):
     """
     Genera el handle (URL slug) del producto.
-    Si se proporciona un trim, se agrega al final del handle
-    para diferenciar productos con diferente trim (ej: V8, KDSS).
+    Si se proporciona un trim o drive, se agrega al final del handle
+    para diferenciar productos con diferente trim/drive (ej: V8, KDSS, 4WD, 2WD).
     """
     handle = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
     if trim and trim.strip():
         trim_slug = re.sub(r'[^a-z0-9]+', '-', trim.lower()).strip('-')
         if trim_slug:
             handle = f"{handle}-{trim_slug}"
+    if drive and drive.strip():
+        drive_slug = re.sub(r'[^a-z0-9]+', '-', drive.lower()).strip('-')
+        if drive_slug:
+            handle = f"{handle}-{drive_slug}"
     return handle
 
 
@@ -476,6 +480,10 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         # Solo agregar Trim si tiene valor (no vacío/NaN)
         # Si dos variantes tienen diferente Trim, serán productos separados
         df["_veh"] = df["_veh"] + "|" + df[trim_col].apply(clean_str).replace("", "_NONE_")
+    if drive_col and drive_col in df.columns:
+        # Solo agregar Drive si tiene valor (no vacío/NaN)
+        # Si dos variantes tienen diferente Drive, serán productos separados
+        df["_veh"] = df["_veh"] + "|" + df[drive_col].apply(clean_str).replace("", "_NONE_")
     vehicles = sorted(df["_veh"].unique())
 
     all_product_rows = []
@@ -497,7 +505,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         year = clean_str(first.get("Year", ""))
         title = build_title(brand, shock_name, lift_range, model, year)
         trim_val_handle = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
-        handle = build_handle(title, trim=trim_val_handle)
+        drive_val_handle = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
+        handle = build_handle(title, trim=trim_val_handle, drive=drive_val_handle)
         pub_at = now_timestamp()
         body_html = build_body_html(vdf, qty_col)
 
@@ -757,6 +766,10 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         # Solo agregar Trim si tiene valor (no vacío/NaN)
         # Si dos variantes tienen diferente Trim, serán productos separados
         df["_veh"] = df["_veh"] + "|" + df[trim_col].apply(clean_str).replace("", "_NONE_")
+    if drive_col and drive_col in df.columns:
+        # Solo agregar Drive si tiene valor (no vacío/NaN)
+        # Si dos variantes tienen diferente Drive, serán productos separados
+        df["_veh"] = df["_veh"] + "|" + df[drive_col].apply(clean_str).replace("", "_NONE_")
     vehicles = sorted(df["_veh"].unique())
     
     all_rows = []
@@ -790,7 +803,8 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         # Generar handle (necesario para identificar el producto)
         title = build_title(brand, shock_name, lift_range, model, year)
         trim_val_handle = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
-        handle = build_handle(title, trim=trim_val_handle)
+        drive_val_handle = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
+        handle = build_handle(title, trim=trim_val_handle, drive=drive_val_handle)
         
         # Fila de producto con SEO Title
         product_row = {
