@@ -423,7 +423,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                           pin_position_col=None, rear_lift_col=None, color_col=None,
                           part_sku_col=None, position_col=None, type_col=None,
                           qty_col=None, gen_col=None, engine_col=None, 
-                          drive_col=None, trim_col=None):
+                          drive_col=None, trim_col=None, weight_map=None):
     if qty_col is None:
         if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
             qty_col = "Qty Customer"
@@ -662,6 +662,22 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 trim_val_var, type_col, internal_type=internal_type_var
             )
 
+            # Peso de variante: suma de front + rear desde weight_map
+            # Si weight_map no se proporciona o falta algun valor, el peso queda vacio
+            variant_weight = ""
+            if weight_map:
+                fw = weight_map.get("front", {}).get(front_val)
+                rw = weight_map.get("rear", {}).get(rear_val)
+                if fw is not None and rw is not None:
+                    try:
+                        total = float(fw) + float(rw)
+                        if total == int(total):
+                            variant_weight = int(total)
+                        else:
+                            variant_weight = total
+                    except (TypeError, ValueError):
+                        variant_weight = ""
+
             vr = blank_row()
             vr.update({
                 "Handle": handle,
@@ -685,6 +701,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 "Variant Command": "MERGE",
                 "Variant Position": idx + 1,
                 "Variant SKU": sku,
+                "Variant Weight": variant_weight,
                 "Variant Weight Unit": "lb",
                 "Variant Price": price,
                 "Variant Taxable": "FALSE",

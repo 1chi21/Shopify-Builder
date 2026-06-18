@@ -706,7 +706,14 @@ else:
 
 ## Versiones y Changelog
 
-### v1.8.10 (2026-06-18) - Versión Actual
+### v1.8.11 (2026-06-18) - Versión Actual
+- **Selector de pesos por variante**: Nueva sección en Tab 1 después del análisis. Inputs de peso (lbs) por cada nivel de Front Load y Rear Load detectado en el archivo. El peso total de la variante es la suma Front + Rear.
+- **Inputs contextuales**: Solo se muestran para los valores mapeados que aparecen en el archivo (ej: "Standard (Up to 50 lbs)").
+- **Backward compatible**: Sin pesos = `Variant Weight` vacío. Nuevo parámetro `weight_map` con default `None` en `build_matrixify_excel`.
+- **Sin session state**: Inputs vacíos en cada análisis.
+
+### v1.8.10 (2026-06-18)
+- **Bug fix orden de variantes**: `sort_variants` ahora extrae el primer número del rango de altura (ej: "4-6" → 4, "2-2.5" → 2) en lugar de hacer `float()` directo que fallaba con rangos. Corrige el orden ascendente para productos con alturas-rango.
 - **Bug fix orden de variantes**: `sort_variants` ahora extrae el primer número del rango de altura (ej: "4-6" → 4, "2-2.5" → 2) en lugar de hacer `float()` directo que fallaba con rangos. Corrige el orden ascendente para productos con alturas-rango.
 - **Bug fix altura vacía (nan)**: Fallback en `build_matrixify_excel` que extrae la altura del Parent Sku cuando la columna Height tiene valores inválidos (datetime, NaN). Nueva función `extract_height_str_from_sku()` en `utils.py` con regex `^(.*)-(\d{4})-(.+?)LEV$`.
 - **Aislamiento**: Solo afecta Tab 1. Tab 2 (SEO & GMC Titles) intacta.
@@ -830,5 +837,5 @@ Para preguntas o problemas con el programa:
 ---
 
 **Última actualización:** 2026-06-18  
-**Versión actual:** 1.8.10  
+**Versión actual:** 1.8.11  
 **Mantenido por:** Equipo de Desarrollo

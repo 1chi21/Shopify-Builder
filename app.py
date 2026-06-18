@@ -1,10 +1,16 @@
 import streamlit as st
 import pandas as pd
-from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only
+from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.8.10"
+APP_VERSION = "1.8.11"
 
 CHANGELOG = """
+### v1.8.11 (2026-06-18)
+- **Selector de pesos por variante**: Nueva seccion en Tab 1 despues del analisis del archivo. Permite asignar peso (en lbs) por cada nivel de Front Load y Rear Load detectado en el archivo. El peso total de la variante es la suma de Front + Rear.
+- **Inputs contextuales**: Solo se muestran campos de input para los valores de carga que aparecen en el archivo (mapeados a su valor final, ej: "Standard (Up to 50 lbs)").
+- **Backward compatible**: Si no se llenan pesos, el campo `Variant Weight` queda vacio (comportamiento previo). Nuevo parametro `weight_map` en `build_matrixify_excel` con default `None`.
+- **Sin session state**: Los inputs arrancan vacios en cada nuevo analisis.
+
 ### v1.8.10 (2026-06-18)
 - **Bug fix orden de variantes**: `sort_variants` ahora extrae el primer número del rango de altura (ej: "4-6" → 4, "2-2.5" → 2) en lugar de hacer `float()` directo que fallaba con rangos. Esto corrige el orden ascendente de variantes para productos con alturas-rango.
 - **Bug fix altura vacía (nan)**: Cuando la columna Height tiene valores inválidos (datetime, NaN) en el input, la app ahora extrae la altura del Parent Sku como fallback (patrón `-{shock}-{altura}LEV$`). Esto corrige el problema donde variantes 4-6 aparecían con Option1="nan" en archivos de Bilstein Silverado.
@@ -284,7 +290,52 @@ with tab1:
                             st.write(f"• {v.replace('|', ' ')}")
                         if len(info['vehicles']) > 20:
                             st.write(f"... y {len(info['vehicles']) - 20} más")
-            
+
+            # Selector de pesos por variante (opcional, despues del analisis)
+            with st.expander("⚖️ Pesos de variantes (opcional)", expanded=True):
+                st.caption("Asigna peso (en lbs) por nivel de carga. El peso total de la variante = Front + Rear. Si dejas vacio, no se envia peso.")
+
+                front_unique = set()
+                rear_unique = set()
+                if "Front Load" in df.columns:
+                    for v in df["Front Load"].dropna().unique():
+                        mapped = map_option(v, FRONT_LOAD_MAP, default="")
+                        if mapped and mapped != "":
+                            front_unique.add(mapped)
+                if "Rear Load" in df.columns:
+                    for v in df["Rear Load"].dropna().unique():
+                        mapped = map_option(v, REAR_LOAD_MAP, default="")
+                        if mapped and mapped != "":
+                            rear_unique.add(mapped)
+
+                front_unique = sorted(front_unique)
+                rear_unique = sorted(rear_unique)
+
+                weight_map = {"front": {}, "rear": {}}
+
+                if front_unique or rear_unique:
+                    col_f, col_r = st.columns(2)
+                    with col_f:
+                        st.markdown("**Front Load (lbs)**")
+                        for fv in front_unique:
+                            val = st.number_input(
+                                fv, min_value=0.0, step=0.5, value=None,
+                                key=f"wf_{fv}", format="%.1f"
+                            )
+                            if val is not None and val > 0:
+                                weight_map["front"][fv] = val
+                    with col_r:
+                        st.markdown("**Rear Load (lbs)**")
+                        for rv in rear_unique:
+                            val = st.number_input(
+                                rv, min_value=0.0, step=0.5, value=None,
+                                key=f"wr_{rv}", format="%.1f"
+                            )
+                            if val is not None and val > 0:
+                                weight_map["rear"][rv] = val
+                else:
+                    st.info("No se detectaron valores de Front Load / Rear Load en el archivo.")
+
             st.divider()
             
             col1, col2 = st.columns([1, 2])
@@ -312,7 +363,8 @@ with tab1:
                             gen_col=info.get('gen_col'),
                             engine_col=info.get('engine_col'),
                             drive_col=info.get('drive_col'),
-                            trim_col=info.get('trim_col')
+                            trim_col=info.get('trim_col'),
+                            weight_map=weight_map
                         )
                         
                         st.success(f"✅ Generado exitosamente: {len(summary)} productos")
