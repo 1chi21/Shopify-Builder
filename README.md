@@ -80,6 +80,11 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.8.7 (2026-06-17)
+- **SEO Title por ID de producto**: El SEO Title ahora se agrupa por la columna "ID" del archivo (1 por producto en Shopify)
+- **GMC Title por variante**: El GMC Title sigue siendo por variante como antes
+- **Fallback automático**: Si no hay columna "ID", se usa el agrupamiento por vehículo (comportamiento anterior)
+
 ### v1.8.6 (2026-06-17)
 - **ASS como diferenciador de producto**: Variantes con "-ASS" en su SKU (assembled) ahora se separan en productos diferentes
 - **Handle incluye ASS**: El handle ahora también incluye "-ass" al final cuando el SKU tiene "-ASS" (ej: `-ass`)

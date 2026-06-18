@@ -2,9 +2,14 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only
 
-APP_VERSION = "1.8.6"
+APP_VERSION = "1.8.7"
 
 CHANGELOG = """
+### v1.8.7 (2026-06-17)
+- **SEO Title por ID de producto**: El SEO Title ahora se agrupa por la columna "ID" del archivo (1 por producto en Shopify)
+- **GMC Title por variante**: El GMC Title sigue siendo por variante como antes
+- **Fallback automático**: Si no hay columna "ID", se usa el agrupamiento por vehículo (comportamiento anterior)
+
 ### v1.8.6 (2026-06-17)
 - **ASS como diferenciador de producto**: Variantes con "-ASS" en su SKU (assembled) ahora se separan en productos diferentes
 - **Handle incluye ASS**: El handle ahora también incluye "-ass" al final cuando el SKU tiene "-ASS" (ej: `-ass`)
@@ -419,6 +424,11 @@ with tab2:
                         st.success(f"Columna Trim: {info_seo['trim_col']}")
                     else:
                         st.info("ℹ️ Columna Trim no encontrada")
+                    
+                    if info_seo.get('id_col'):
+                        st.success(f"Columna ID: {info_seo['id_col']} (se usará para agrupar SEO Titles)")
+                    else:
+                        st.info("ℹ️ Columna ID no encontrada (SEO Titles se agruparán por vehículo)")
             
             st.divider()
             
@@ -438,7 +448,8 @@ with tab2:
                             engine_col=info_seo.get('engine_col'),
                             drive_col=info_seo.get('drive_col'),
                             trim_col=info_seo.get('trim_col'),
-                            type_col=info_seo.get('type_col')
+                            type_col=info_seo.get('type_col'),
+                            id_col=info_seo.get('id_col')
                         )
                         
                         st.success(f"✅ Generado exitosamente: {len(summary_seo)} productos")

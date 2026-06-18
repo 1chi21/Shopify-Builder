@@ -273,6 +273,7 @@ def analyze_input(df):
         "part_sku_col": None,
         "position_col": None,
         "type_col": None,
+        "id_col": None,
         "qty_col": None,
         "gen_col": None,
         "engine_col": None,
@@ -316,6 +317,8 @@ def analyze_input(df):
         info["drive_col"] = "Drive"
     if "Trim" in df.columns:
         info["trim_col"] = "Trim"
+    if "ID" in df.columns:
+        info["id_col"] = "ID"
 
     if shock_col:
         info["shocks"] = sorted([str(s) for s in df[shock_col].dropna().unique().tolist()])
@@ -713,10 +716,14 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
 
 def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None, 
-                       engine_col=None, drive_col=None, trim_col=None, type_col=None):
+                       engine_col=None, drive_col=None, trim_col=None, type_col=None,
+                       id_col=None):
     """
     Genera un archivo Excel con SOLO los metafields SEO Title y GMC Title
     para actualizar productos existentes en Shopify.
+    
+    El SEO Title se agrupa por la columna "ID" (1 por producto en Shopify).
+    El GMC Title se agrupa por variante.
     
     Retorna: (output_bytes, summary_list, result_dataframe)
     """
@@ -735,6 +742,8 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         trim_col = "Trim"
     if type_col is None:
         type_col = _find_column(df, TYPE_COL_CANDIDATES)
+    if id_col is None and "ID" in df.columns:
+        id_col = "ID"
     
     # Limpiar columnas de vehículo
     for c in ["Make", "Model", "Year", "Brand"]:
@@ -797,8 +806,17 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
     all_rows = []
     summary = []
     
-    for vk in vehicles:
-        vdf = df[df["_veh"] == vk].copy()
+    # Determinar si agrupar por ID o por _veh
+    if id_col and id_col in df.columns:
+        # Agrupar por ID (1 SEO Title por producto en Shopify)
+        products = df[id_col].dropna().unique()
+        products = [p for p in products if str(p).strip() != ""]
+        product_groups = [(p, df[df[id_col] == p].copy()) for p in products]
+    else:
+        # Fallback: agrupar por _veh (comportamiento anterior)
+        product_groups = [(vk, df[df["_veh"] == vk].copy()) for vk in vehicles]
+    
+    for pk, vdf in product_groups:
         first = vdf.iloc[0]
         brand = clean_str(first.get("Brand", ""))
         shock_name = clean_str(first.get(shock_col, "")) if shock_col else ""
@@ -894,7 +912,7 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             all_rows.append(variant_row)
         
         summary.append({
-            "vehicle": vk.replace("|", " "),
+            "product_id": pk if id_col and id_col in df.columns else vk.replace("|", " "),
             "handle": handle,
             "seo_title": seo_title,
             "seo_chars": len(seo_title),
