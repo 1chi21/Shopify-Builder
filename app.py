@@ -6,10 +6,11 @@ APP_VERSION = "1.8.11"
 
 CHANGELOG = """
 ### v1.8.11 (2026-06-18)
-- **Selector de pesos por variante**: Nueva seccion en Tab 1 despues del analisis del archivo. Permite asignar peso (en lbs) por cada nivel de Front Load y Rear Load detectado en el archivo. El peso total de la variante es la suma de Front + Rear.
-- **Inputs contextuales**: Solo se muestran campos de input para los valores de carga que aparecen en el archivo (mapeados a su valor final, ej: "Standard (Up to 50 lbs)").
-- **Backward compatible**: Si no se llenan pesos, el campo `Variant Weight` queda vacio (comportamiento previo). Nuevo parametro `weight_map` en `build_matrixify_excel` con default `None`.
-- **Sin session state**: Los inputs arrancan vacios en cada nuevo analisis.
+- **Editor de opciones de variantes**: Nueva seccion en Tab 1 despues del analisis. Permite editar el texto de Option2/Option3 Value (la capacidad de carga tipo "Standard (Up to 50 lbs)") para cada valor de Front Load y Rear Load detectado. Util cuando no todos los productos tienen las mismas capacidades.
+- **Inputs pre-llenados**: Cada input arranca con el valor mapeado por defecto; si lo editas, se usa el nuevo texto en el output.
+- **Valores no mapeados**: Si el archivo tiene un valor de carga que no esta en el map, se muestra un input vacio para que lo llenes manualmente.
+- **Backward compatible**: Si no tocas nada, se usan los valores del map (comportamiento previo). Nuevo parametro `option_value_overrides` en `build_matrixify_excel` con default `None`.
+- **Sort intacto**: El orden de variantes sigue basado en los valores del map, no en el texto override (los overrides son cosmeticos).
 
 ### v1.8.10 (2026-06-18)
 - **Bug fix orden de variantes**: `sort_variants` ahora extrae el primer número del rango de altura (ej: "4-6" → 4, "2-2.5" → 2) en lugar de hacer `float()` directo que fallaba con rangos. Esto corrige el orden ascendente de variantes para productos con alturas-rango.
@@ -291,48 +292,44 @@ with tab1:
                         if len(info['vehicles']) > 20:
                             st.write(f"... y {len(info['vehicles']) - 20} más")
 
-            # Selector de pesos por variante (opcional, despues del analisis)
-            with st.expander("⚖️ Pesos de variantes (opcional)", expanded=True):
-                st.caption("Asigna peso (en lbs) por nivel de carga. El peso total de la variante = Front + Rear. Si dejas vacio, no se envia peso.")
+            # Editor de texto de Option2/Option3 Value (opcional, despues del analisis)
+            with st.expander("✏️ Opciones de variantes (opcional)", expanded=True):
+                st.caption("Edita el texto de las opciones Front Load / Rear Load si cambia la capacidad. Si dejas el default, se usa el mapeo estandar.")
 
-                front_unique = set()
-                rear_unique = set()
-                if "Front Load" in df.columns:
-                    for v in df["Front Load"].dropna().unique():
-                        mapped = map_option(v, FRONT_LOAD_MAP, default="")
-                        if mapped and mapped != "":
-                            front_unique.add(mapped)
-                if "Rear Load" in df.columns:
-                    for v in df["Rear Load"].dropna().unique():
-                        mapped = map_option(v, REAR_LOAD_MAP, default="")
-                        if mapped and mapped != "":
-                            rear_unique.add(mapped)
+                def compute_override_keys(series, mapping):
+                    """Devuelve dict {key: (label, default_value)} para los inputs.
+                    Mapeados: key=mapped, default=mapped. No mapeados: key=raw, default=''."""
+                    result = {}
+                    for raw in series.dropna().unique():
+                        raw_s = str(raw).strip()
+                        if not raw_s or raw_s.lower() in ("nan", "none", "n/a", ""):
+                            continue
+                        mapped = map_option(raw, mapping, default="")
+                        if mapped:
+                            result[mapped] = (mapped, mapped)
+                        else:
+                            result[raw_s] = (raw_s, "")
+                    return result
 
-                front_unique = sorted(front_unique)
-                rear_unique = sorted(rear_unique)
+                front_keys = compute_override_keys(df["Front Load"], FRONT_LOAD_MAP) if "Front Load" in df.columns else {}
+                rear_keys = compute_override_keys(df["Rear Load"], REAR_LOAD_MAP) if "Rear Load" in df.columns else {}
 
-                weight_map = {"front": {}, "rear": {}}
+                option_value_overrides = {"front": {}, "rear": {}}
 
-                if front_unique or rear_unique:
+                if front_keys or rear_keys:
                     col_f, col_r = st.columns(2)
                     with col_f:
-                        st.markdown("**Front Load (lbs)**")
-                        for fv in front_unique:
-                            val = st.number_input(
-                                fv, min_value=0.0, step=0.5, value=None,
-                                key=f"wf_{fv}", format="%.1f"
-                            )
-                            if val is not None and val > 0:
-                                weight_map["front"][fv] = val
+                        st.markdown("**Front Load**")
+                        for key, (label, default) in front_keys.items():
+                            val = st.text_input(label, value=default, key=f"of_{key}")
+                            if val and val.strip():
+                                option_value_overrides["front"][key] = val.strip()
                     with col_r:
-                        st.markdown("**Rear Load (lbs)**")
-                        for rv in rear_unique:
-                            val = st.number_input(
-                                rv, min_value=0.0, step=0.5, value=None,
-                                key=f"wr_{rv}", format="%.1f"
-                            )
-                            if val is not None and val > 0:
-                                weight_map["rear"][rv] = val
+                        st.markdown("**Rear Load**")
+                        for key, (label, default) in rear_keys.items():
+                            val = st.text_input(label, value=default, key=f"or_{key}")
+                            if val and val.strip():
+                                option_value_overrides["rear"][key] = val.strip()
                 else:
                     st.info("No se detectaron valores de Front Load / Rear Load en el archivo.")
 
@@ -364,7 +361,7 @@ with tab1:
                             engine_col=info.get('engine_col'),
                             drive_col=info.get('drive_col'),
                             trim_col=info.get('trim_col'),
-                            weight_map=weight_map
+                            option_value_overrides=option_value_overrides
                         )
                         
                         st.success(f"✅ Generado exitosamente: {len(summary)} productos")

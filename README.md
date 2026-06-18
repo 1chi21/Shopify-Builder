@@ -81,10 +81,11 @@ streamlit run app.py
 ## Changelog
 
 ### v1.8.11 (2026-06-18)
-- **Selector de pesos por variante**: Nueva sección en Tab 1 después del análisis del archivo. Permite asignar peso (en lbs) por cada nivel de Front Load y Rear Load detectado. El peso total de la variante = Front + Rear.
-- **Inputs contextuales**: Solo se muestran campos para los valores de carga que aparecen en el archivo (mapeados a su valor final, ej: "Standard (Up to 50 lbs)").
-- **Backward compatible**: Si no se llenan pesos, `Variant Weight` queda vacío (comportamiento previo).
-- **Sin session state**: Inputs vacíos en cada nuevo análisis.
+- **Editor de opciones de variantes**: Nueva sección en Tab 1 después del análisis. Permite editar el texto de Option2/Option3 Value (la capacidad de carga tipo "Standard (Up to 50 lbs)") para cada valor de Front Load y Rear Load detectado. Útil cuando no todos los productos tienen las mismas capacidades.
+- **Inputs pre-llenados**: Cada input arranca con el valor mapeado por defecto; si lo editas, se usa el nuevo texto en el output.
+- **Valores no mapeados**: Si el archivo tiene un valor que no está en el map, se muestra un input vacío para llenarlo manualmente.
+- **Backward compatible**: Si no tocas nada, se usan los valores del map (comportamiento previo).
+- **Sort intacto**: El orden de variantes sigue basado en los valores del map.
 
 ### v1.8.10 (2026-06-18)
 - **Bug fix orden de variantes**: `sort_variants` ahora extrae el primer número del rango de altura (ej: "4-6" → 4, "2-2.5" → 2) en lugar de hacer `float()` directo que fallaba con rangos. Esto corrige el orden ascendente de variantes para productos con alturas-rango.

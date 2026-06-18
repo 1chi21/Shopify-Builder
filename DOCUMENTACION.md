@@ -707,10 +707,11 @@ else:
 ## Versiones y Changelog
 
 ### v1.8.11 (2026-06-18) - Versión Actual
-- **Selector de pesos por variante**: Nueva sección en Tab 1 después del análisis. Inputs de peso (lbs) por cada nivel de Front Load y Rear Load detectado en el archivo. El peso total de la variante es la suma Front + Rear.
-- **Inputs contextuales**: Solo se muestran para los valores mapeados que aparecen en el archivo (ej: "Standard (Up to 50 lbs)").
-- **Backward compatible**: Sin pesos = `Variant Weight` vacío. Nuevo parámetro `weight_map` con default `None` en `build_matrixify_excel`.
-- **Sin session state**: Inputs vacíos en cada análisis.
+- **Editor de opciones de variantes**: Nueva sección en Tab 1 después del análisis. Inputs de texto editables pre-llenados con los valores mapeados de Option2/Option3 Value (capacidades de carga tipo "Standard (Up to 50 lbs)"). Permite sobreescribirlos cuando no todos los productos tienen las mismas capacidades.
+- **Valores no mapeados**: Si el archivo tiene un valor de carga no presente en `FRONT_LOAD_MAP`/`REAR_LOAD_MAP`, se muestra un input vacío para llenarlo manualmente.
+- **Backward compatible**: Sin overrides = valores del map (comportamiento previo). Nuevo parámetro `option_value_overrides` con default `None` en `build_matrixify_excel`.
+- **Sort intacto**: El orden de variantes sigue basado en los valores del map; los overrides son cosméticos.
+- **Sin session state**: Inputs vacíos en cada análisis nuevo.
 
 ### v1.8.10 (2026-06-18)
 - **Bug fix orden de variantes**: `sort_variants` ahora extrae el primer número del rango de altura (ej: "4-6" → 4, "2-2.5" → 2) en lugar de hacer `float()` directo que fallaba con rangos. Corrige el orden ascendente para productos con alturas-rango.

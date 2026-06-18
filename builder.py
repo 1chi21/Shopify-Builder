@@ -423,7 +423,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                           pin_position_col=None, rear_lift_col=None, color_col=None,
                           part_sku_col=None, position_col=None, type_col=None,
                           qty_col=None, gen_col=None, engine_col=None, 
-                          drive_col=None, trim_col=None, weight_map=None):
+                          drive_col=None, trim_col=None, option_value_overrides=None):
     if qty_col is None:
         if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
             qty_col = "Qty Customer"
@@ -662,21 +662,25 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 trim_val_var, type_col, internal_type=internal_type_var
             )
 
-            # Peso de variante: suma de front + rear desde weight_map
-            # Si weight_map no se proporciona o falta algun valor, el peso queda vacio
-            variant_weight = ""
-            if weight_map:
-                fw = weight_map.get("front", {}).get(front_val)
-                rw = weight_map.get("rear", {}).get(rear_val)
-                if fw is not None and rw is not None:
-                    try:
-                        total = float(fw) + float(rw)
-                        if total == int(total):
-                            variant_weight = int(total)
-                        else:
-                            variant_weight = total
-                    except (TypeError, ValueError):
-                        variant_weight = ""
+            # Override de Option2/Option3 Value: si el usuario edito el texto de la opcion,
+            # usar el override. effective_key = mapped_value si existe, sino el raw value.
+            # Asi el lookup en option_value_overrides es consistente con la UI.
+            raw_front_load = str(row.get("Front Load", "")).strip() if "Front Load" in row else ""
+            raw_rear_load = str(row.get("Rear Load", "")).strip() if "Rear Load" in row else ""
+            front_eff = map_option(raw_front_load, FRONT_LOAD_MAP, default="") if raw_front_load else ""
+            front_eff = front_eff if front_eff else raw_front_load
+            rear_eff = map_option(raw_rear_load, REAR_LOAD_MAP, default="") if raw_rear_load else ""
+            rear_eff = rear_eff if rear_eff else raw_rear_load
+
+            final_front = front_val
+            final_rear = rear_val
+            if option_value_overrides:
+                ov_f = option_value_overrides.get("front", {}).get(front_eff)
+                if ov_f:
+                    final_front = ov_f
+                ov_r = option_value_overrides.get("rear", {}).get(rear_eff)
+                if ov_r:
+                    final_rear = ov_r
 
             vr = blank_row()
             vr.update({
@@ -695,13 +699,12 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 "Option1 Name": "Select Desired Lift Setting",
                 "Option1 Value": lift_val,
                 "Option2 Name": "Select Front Load (Constant)",
-                "Option2 Value": front_val,
+                "Option2 Value": final_front,
                 "Option3 Name": "Select Rear Load (Constant)",
-                "Option3 Value": rear_val,
+                "Option3 Value": final_rear,
                 "Variant Command": "MERGE",
                 "Variant Position": idx + 1,
                 "Variant SKU": sku,
-                "Variant Weight": variant_weight,
                 "Variant Weight Unit": "lb",
                 "Variant Price": price,
                 "Variant Taxable": "FALSE",
