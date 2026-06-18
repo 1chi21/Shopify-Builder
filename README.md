@@ -80,6 +80,9 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.8.9 (2026-06-17)
+- **Columna ID agregada al output**: El archivo de Excel ahora incluye el ID del producto en Shopify para fácil identificación en Matrixify
+
 ### v1.8.8 (2026-06-17)
 - **Bug fix**: Corregido error NameError cuando no hay columna ID (usaba variable `vk` no definida)
 

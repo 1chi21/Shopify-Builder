@@ -850,6 +850,7 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         
         # Fila de producto con SEO Title
         product_row = {
+            "ID": pk,
             "Handle": handle,
             "Command": "UPDATE",
             "Metafield: title_tag [string]": seo_title,
@@ -904,6 +905,7 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             )
             
             variant_row = {
+                "ID": pk,
                 "Handle": handle,
                 "Command": "UPDATE",
                 "Variant SKU": sku,

@@ -2,9 +2,12 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only
 
-APP_VERSION = "1.8.8"
+APP_VERSION = "1.8.9"
 
 CHANGELOG = """
+### v1.8.9 (2026-06-17)
+- **Columna ID agregada al output**: El archivo de Excel ahora incluye el ID del producto en Shopify para fácil identificación en Matrixify
+
 ### v1.8.8 (2026-06-17)
 - **Bug fix**: Corregido error NameError cuando no hay columna ID (usaba variable `vk` no definida)
 
