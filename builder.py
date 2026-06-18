@@ -215,11 +215,11 @@ def build_title(brand, shock_name, lift_range, model, year):
     return " ".join(parts)
 
 
-def build_handle(title, trim="", drive=""):
+def build_handle(title, trim="", drive="", assembled=False):
     """
     Genera el handle (URL slug) del producto.
-    Si se proporciona un trim o drive, se agrega al final del handle
-    para diferenciar productos con diferente trim/drive (ej: V8, KDSS, 4WD, 2WD).
+    Si se proporciona un trim, drive, o si es assembled, se agrega al final del handle
+    para diferenciar productos (ej: V8, KDSS, 4WD, 2WD, -ass).
     """
     handle = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
     if trim and trim.strip():
@@ -230,6 +230,8 @@ def build_handle(title, trim="", drive=""):
         drive_slug = re.sub(r'[^a-z0-9]+', '-', drive.lower()).strip('-')
         if drive_slug:
             handle = f"{handle}-{drive_slug}"
+    if assembled:
+        handle = f"{handle}-ass"
     return handle
 
 
@@ -466,6 +468,10 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
     if shock_col and shock_col in df.columns:
         df[shock_col] = df[shock_col].apply(clean_str)
 
+    # Detectar si el SKU tiene "-ASS" (assembled) - esto crea un producto separado
+    if "Parent Sku" in df.columns:
+        df["_assembled"] = df["Parent Sku"].astype(str).str.contains("-ASS", na=False).map({True: "ass", False: "_NONE_"})
+
     has_v = pd.Series([True] * len(df), index=df.index)
     if "Make" in df.columns:
         has_v = has_v & (df["Make"] != "")
@@ -484,6 +490,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         # Solo agregar Drive si tiene valor (no vacío/NaN)
         # Si dos variantes tienen diferente Drive, serán productos separados
         df["_veh"] = df["_veh"] + "|" + df[drive_col].apply(clean_str).replace("", "_NONE_")
+    # Agregar ASS al agrupamiento - variantes con "-ASS" son productos separados
+    if "_assembled" in df.columns:
+        df["_veh"] = df["_veh"] + "|" + df["_assembled"]
     vehicles = sorted(df["_veh"].unique())
 
     all_product_rows = []
@@ -506,7 +515,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         title = build_title(brand, shock_name, lift_range, model, year)
         trim_val_handle = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
         drive_val_handle = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
-        handle = build_handle(title, trim=trim_val_handle, drive=drive_val_handle)
+        # Detectar si el producto es ASS (assembled) basándose en los SKUs
+        assembled_val = "_assembled" in vdf.columns and vdf["_assembled"].iloc[0] == "ass"
+        handle = build_handle(title, trim=trim_val_handle, drive=drive_val_handle, assembled=assembled_val)
         pub_at = now_timestamp()
         body_html = build_body_html(vdf, qty_col)
 
@@ -762,6 +773,10 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
     if "Total Price" in df.columns:
         df["Total Price"] = pd.to_numeric(df["Total Price"], errors='coerce')
     
+    # Detectar si el SKU tiene "-ASS" (assembled) - esto crea un producto separado
+    if "Parent Sku" in df.columns:
+        df["_assembled"] = df["Parent Sku"].astype(str).str.contains("-ASS", na=False).map({True: "ass", False: "_NONE_"})
+    
     # Agrupar por vehículo + shock + trim
     df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
     if shock_col and shock_col in df.columns:
@@ -774,6 +789,9 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         # Solo agregar Drive si tiene valor (no vacío/NaN)
         # Si dos variantes tienen diferente Drive, serán productos separados
         df["_veh"] = df["_veh"] + "|" + df[drive_col].apply(clean_str).replace("", "_NONE_")
+    # Agregar ASS al agrupamiento - variantes con "-ASS" son productos separados
+    if "_assembled" in df.columns:
+        df["_veh"] = df["_veh"] + "|" + df["_assembled"]
     vehicles = sorted(df["_veh"].unique())
     
     all_rows = []
@@ -808,7 +826,9 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         title = build_title(brand, shock_name, lift_range, model, year)
         trim_val_handle = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
         drive_val_handle = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
-        handle = build_handle(title, trim=trim_val_handle, drive=drive_val_handle)
+        # Detectar si el producto es ASS (assembled) basándose en los SKUs
+        assembled_val = "_assembled" in vdf.columns and vdf["_assembled"].iloc[0] == "ass"
+        handle = build_handle(title, trim=trim_val_handle, drive=drive_val_handle, assembled=assembled_val)
         
         # Fila de producto con SEO Title
         product_row = {
