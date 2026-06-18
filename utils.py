@@ -57,3 +57,29 @@ def build_lift_range(lift_values):
     else:
         max_s = str(max_v)
     return f"{min_s}-{max_s} inch"
+
+
+def extract_height_str_from_sku(sku):
+    """
+    Extrae el string de altura (rango o valor único) del Parent Sku.
+    Maneja el patron -(shock 4 digitos)-(altura)LEV$ usado en Leveling Kits.
+    Retorna solo el string de altura (sin "inches"), listo para usar como valor
+    normalizado en la columna de lift height.
+
+    El regex usa un prefijo greedy con backtracking para encontrar el ULTIMO
+    segmento de 4 digitos (el shock) antes de LEV, ignorando años o modelos
+    que tambien puedan ser 4 digitos.
+
+    Ejemplos:
+      BILSIL-2500-0713-5100-4-6LEV      -> "4-6"
+      BILSIL-2500-1418-5100-1.5LEV      -> "1.5"
+      BILSIL-1500-0713-5100-0-1.75LEV   -> "0-1.75"
+      BILSIL-2500-19ON-5100-4-6LEV      -> "4-6"
+      SKU sin patron LEV                -> ""
+    """
+    m = re.search(r'^(.*)-(\d{4})-(.+?)LEV$', str(sku), re.IGNORECASE)
+    if m:
+        height = m.group(3).strip()
+        if height:
+            return height
+    return ""

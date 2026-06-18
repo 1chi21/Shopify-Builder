@@ -80,6 +80,11 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.8.10 (2026-06-18)
+- **Bug fix orden de variantes**: `sort_variants` ahora extrae el primer número del rango de altura (ej: "4-6" → 4, "2-2.5" → 2) en lugar de hacer `float()` directo que fallaba con rangos. Esto corrige el orden ascendente de variantes para productos con alturas-rango.
+- **Bug fix altura vacía (nan)**: Cuando la columna Height tiene valores inválidos (datetime, NaN) en el input, la app ahora extrae la altura del Parent Sku como fallback (patrón `-{shock}-{altura}LEV$`). Esto corrige el problema donde variantes con altura-rango aparecían sin nombre (Option1="nan") en el output.
+- **Aislamiento**: Ambos fixes solo afectan Tab 1 (Crear Productos). Tab 2 (SEO & GMC Titles) queda intacta.
+
 ### v1.8.9 (2026-06-17)
 - **Columna ID agregada al output**: El archivo de Excel ahora incluye el ID del producto en Shopify para fácil identificación en Matrixify
 

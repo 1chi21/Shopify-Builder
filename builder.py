@@ -4,7 +4,7 @@ import re
 import io
 from datetime import datetime, timezone
 from title_generator import build_seo_title, build_gmc_title
-from utils import clean_str, build_lift_range
+from utils import clean_str, build_lift_range, extract_height_str_from_sku
 
 
 FRONT_LOAD_MAP = {
@@ -238,10 +238,15 @@ def build_handle(title, trim="", drive="", assembled=False):
 def sort_variants(vars_df):
     def sort_key(row):
         lift = clean_str(row.get("_lift_val", "")).replace(" inches", "").replace(" inch", "")
-        try:
-            lift_num = float(lift) if lift else 0
-        except:
-            lift_num = 0
+        lift_num = 0
+        if lift:
+            # Extraer el primer numero del string para soportar rangos como "2-2.5" o "4-6"
+            m = re.search(r'(\d+\.?\d*)', lift)
+            if m:
+                try:
+                    lift_num = float(m.group(1))
+                except:
+                    lift_num = 0
         front_order = FRONT_LOAD_ORDER.get(row["_front_val"], 99)
         rear_order = REAR_LOAD_ORDER.get(row["_rear_val"], 99)
         return (lift_num, front_order, rear_order)
@@ -467,6 +472,14 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
     if lift_col and lift_col in df.columns:
         df[lift_col] = df[lift_col].apply(normalize_lift_value)
+        # Fallback: si la columna Height quedo vacia (datos sucios como datetime/NaN),
+        # intentar extraer la altura del Parent Sku (patron -XXXX-{altura}LEV$)
+        if "Parent Sku" in df.columns:
+            empty_mask = df[lift_col].apply(lambda x: not clean_str(x))
+            if empty_mask.any():
+                df.loc[empty_mask, lift_col] = df.loc[empty_mask, "Parent Sku"].apply(
+                    extract_height_str_from_sku
+                )
 
     if shock_col and shock_col in df.columns:
         df[shock_col] = df[shock_col].apply(clean_str)

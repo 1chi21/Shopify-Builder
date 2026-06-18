@@ -706,7 +706,52 @@ else:
 
 ## Versiones y Changelog
 
-### v1.7.0 (2026-06-17) - Versión Actual
+### v1.8.10 (2026-06-18) - Versión Actual
+- **Bug fix orden de variantes**: `sort_variants` ahora extrae el primer número del rango de altura (ej: "4-6" → 4, "2-2.5" → 2) en lugar de hacer `float()` directo que fallaba con rangos. Corrige el orden ascendente para productos con alturas-rango.
+- **Bug fix altura vacía (nan)**: Fallback en `build_matrixify_excel` que extrae la altura del Parent Sku cuando la columna Height tiene valores inválidos (datetime, NaN). Nueva función `extract_height_str_from_sku()` en `utils.py` con regex `^(.*)-(\d{4})-(.+?)LEV$`.
+- **Aislamiento**: Solo afecta Tab 1. Tab 2 (SEO & GMC Titles) intacta.
+
+### v1.8.9 (2026-06-17)
+- **Columna ID agregada al output**: El archivo de Excel ahora incluye el ID del producto en Shopify para fácil identificación en Matrixify
+
+### v1.8.8 (2026-06-17)
+- **Bug fix**: Corregido error NameError cuando no hay columna ID (usaba variable `vk` no definida)
+
+### v1.8.7 (2026-06-17)
+- **SEO Title por ID de producto**: El SEO Title ahora se agrupa por la columna "ID" del archivo (1 por producto en Shopify)
+- **GMC Title por variante**: El GMC Title sigue siendo por variante como antes
+- **Fallback automático**: Si no hay columna "ID", se usa el agrupamiento por vehículo (comportamiento anterior)
+
+### v1.8.6 (2026-06-17)
+- **ASS como diferenciador de producto**: Variantes con "-ASS" en su SKU (assembled) ahora se separan en productos diferentes
+- **Handle incluye ASS**: El handle ahora también incluye "-ass" al final cuando el SKU tiene "-ASS" (ej: `-ass`)
+
+### v1.8.5 (2026-06-17)
+- **Leveling Kit por variante**: Cada variante ahora detecta su tipo (Leveling/Lift) desde la columna "Internal Type" de su SKU
+- **GMC Title correcto por variante**: Variantes con "Leveling" en Internal Type ahora muestran "Leveling Kit" en el título
+
+### v1.8.4 (2026-06-17)
+- **Leveling Kit detection**: Si el producto es "Leveling Kit" (en Internal Type o Type), el título ahora dice "Leveling Kit" en lugar de "Lift Kit"
+- **Aplica a SEO Title y GMC Title**: Ambas pestañas generan el tipo de kit correcto
+
+### v1.8.3 (2026-06-17)
+- **Drive como diferenciador de producto**: Variantes con diferente Drive (4WD, 2WD, Both, etc.) ahora se separan en productos diferentes
+- **Handle incluye Drive**: El handle ahora también incluye el Drive al final (ej: `-4wd`, `-2wd`)
+
+### v1.8.2 (2026-06-17)
+- **Trim como diferenciador de producto**: Variantes con diferente Trim (V8, KDSS, RWD, etc.) ahora se separan en productos diferentes
+- **Handle incluye Trim**: El handle ahora incluye el Trim al final para evitar duplicados (ej: `-v8`, `-kdss`)
+
+### v1.8.1 (2026-06-17)
+- **Shock Nitro → Nitrocharger**: Si el shock dice "Nitro", ahora se muestra como "Nitrocharger" en los títulos SEO/GMC
+- **Engine "Gas" omitido**: Si el engine dice "Gas", ya no se incluye en el GMC Title (se sobreentiende). Otros valores (Diesel, Hybrid, etc.) sí se incluyen
+
+### v1.8.0 (2026-06-17)
+- **Nueva pestaña "SEO & GMC Titles"**: Para actualizar títulos de productos existentes sin crear nuevos
+- **Archivo de actualización**: Genera Excel con solo Handle, Command UPDATE, y metafields SEO/GMC
+- **Verificación de límites**: Advierte cuando SEO Titles superan 70 caracteres
+
+### v1.7.0 (2026-06-17)
 - **SEO Title**: Nuevo metafield `title_tag` generado según reglas de Carlos (máximo 70 caracteres, nivel producto)
 - **GMC Title**: Nuevo metafield `custom.gmc_title` generado según reglas de Carlos (máximo 150 caracteres, nivel variante)
 - **Nuevos archivos**: `title_generator.py`, `title_rules.py`, `utils.py` para generación de títulos SEO/GMC
@@ -784,6 +829,6 @@ Para preguntas o problemas con el programa:
 
 ---
 
-**Última actualización:** 2026-06-10  
-**Versión actual:** 1.6.7  
+**Última actualización:** 2026-06-18  
+**Versión actual:** 1.8.10  
 **Mantenido por:** Equipo de Desarrollo
