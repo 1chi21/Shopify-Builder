@@ -2,9 +2,12 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only
 
-APP_VERSION = "1.8.7"
+APP_VERSION = "1.8.8"
 
 CHANGELOG = """
+### v1.8.8 (2026-06-17)
+- **Bug fix**: Corregido error NameError cuando no hay columna ID (usaba variable `vk` no definida)
+
 ### v1.8.7 (2026-06-17)
 - **SEO Title por ID de producto**: El SEO Title ahora se agrupa por la columna "ID" del archivo (1 por producto en Shopify)
 - **GMC Title por variante**: El GMC Title sigue siendo por variante como antes

@@ -912,7 +912,7 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             all_rows.append(variant_row)
         
         summary.append({
-            "product_id": pk if id_col and id_col in df.columns else vk.replace("|", " "),
+            "product_id": pk if (id_col and id_col in df.columns) else str(pk),
             "handle": handle,
             "seo_title": seo_title,
             "seo_chars": len(seo_title),
