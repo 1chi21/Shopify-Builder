@@ -1,6 +1,8 @@
 """
 Funciones para generar SEO Title y GMC Title según reglas de Carlos
 """
+import re
+from datetime import datetime
 import pandas as pd
 from title_rules import (
     SHOCK_ABBREVIATIONS,
@@ -18,10 +20,22 @@ def get_generation(gen_value):
     """
     Convierte el valor de Gen a formato legible para título
     Ejemplo: "5thGen" -> "5th Gen"
+
+    Retorna string vacío si el valor parece un año o rango de años (ej: "2018",
+    "2010-2016", "2010-16") o un datetime (ej: "2018-07-01..."), para evitar
+    duplicar el año en el título.
     """
     if pd.isna(gen_value):
         return ""
+    if isinstance(gen_value, datetime):
+        return ""
     gen_str = str(gen_value).strip()
+    # Si es un string que parece datetime (YYYY-MM-DD...), ignorar
+    if re.match(r'^\d{4}-\d{2}-\d{2}', gen_str):
+        return ""
+    # Si es un año o rango de años (ej: "2018", "2010-2016", "2010-16"), ignorar
+    if re.match(r'^\d{4}(-\d{2,4})?$', gen_str):
+        return ""
     return GENERATION_MAP.get(gen_str, gen_str)
 
 

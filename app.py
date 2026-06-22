@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.9.2"
+APP_VERSION = "1.9.3"
 
 CHANGELOG = """
+### v1.9.3 (2026-06-22)
+- **Bug fix año duplicado en títulos**: `get_generation` ahora ignora valores que son años o rangos de años (ej: `"2018"`, `"2010-2016"`, `"2010-16"`) además de datetimes. Esto evita que el año aparezca duplicado en SEO/GMC Title (una vez en la posición de Gen y otra al final entre paréntesis).
+- **Aislamiento**: Solo afecta el campo Gen. Valores válidos como `"5thGen"`, `"4thGen"`, `"100 Series"` siguen funcionando normalmente.
+
 ### v1.9.2 (2026-06-22)
 - **Bug fix datetime persistente**: Ademas de detectar objetos `datetime`/`pd.Timestamp`, `clean_str` ahora tambien detecta **strings con formato datetime** tipo `"2018-07-01 00:00:00"` o `"2018-07-01"` y extrae el año (ej: `"2018-07-01 00:00:00"` → `"2018"`). Esto cubre el caso donde el valor llega como string y no como objeto datetime.
 - **Limpieza a nivel de columna**: Las columnas `Gen`, `Engine`, `Drive`, `Trim` y `Shock` ahora se limpian con `clean_str` a nivel de columna en `analyze_input` y `build_matrixify_excel` (antes solo se limpiaban `Make/Model/Year/Brand`). Esto garantiza que todos los valores pasen por la limpieza, no solo los de la primera fila.
