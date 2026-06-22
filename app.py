@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.9.5"
+APP_VERSION = "1.9.6"
 
 CHANGELOG = """
+### v1.9.6 (2026-06-22)
+- **Debug logs en get_generation**: Se agregaron prints de debug para confirmar que el filtro de Gen se está aplicando. Visible en los logs de Streamlit Cloud.
+- **Aislamiento**: Solo agrega logging, no cambia el comportamiento.
+
 ### v1.9.5 (2026-06-22)
 - **Bug fix rango de años 2 dígitos**: `get_generation` ahora también filtra rangos de años con 2 dígitos (ej: `"14-18"`, `"10-16"`) además de los de 4 dígitos. El regex cambió de `^\d{4}(-\d{2,4})?$` a `^\d{2,4}(-\d{2,4})?$` para cubrir ambos formatos.
 - **Aislamiento**: Productos con Gen válido (`"5thGen"`, `"4thGen"`, etc.) siguen funcionando.

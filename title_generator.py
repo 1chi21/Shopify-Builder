@@ -31,10 +31,12 @@ def get_generation(gen_value):
     gen_str = str(gen_value).strip()
     # Si es un string que parece datetime (YYYY-MM-DD...), ignorar
     if re.match(r'^\d{4}-\d{2}-\d{2}', gen_str):
+        print(f"[DEBUG get_generation] Gen filtrado (datetime-like): {gen_str!r}")
         return ""
     # Si es un año o rango de años (ej: "2018", "2010-2016", "2010-16", "14-18"), ignorar
     # \d{2,4} acepta tanto 2 digitos (14-18) como 4 digitos (2010-2016)
     if re.match(r'^\d{2,4}(-\d{2,4})?$', gen_str):
+        print(f"[DEBUG get_generation] Gen filtrado (year/range): {gen_str!r}")
         return ""
     return GENERATION_MAP.get(gen_str, gen_str)
 
