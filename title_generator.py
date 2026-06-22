@@ -9,6 +9,7 @@ from title_rules import (
     SEO_TITLE_MAX_LENGTH,
     GMC_TITLE_MAX_LENGTH,
     GMC_ALTERNATIVE_TEXT,
+    ASSEMBLY_TEXT,
 )
 from utils import clean_str, build_lift_range
 
@@ -125,14 +126,15 @@ def determine_kit_type(internal_type_value=None, vdf_for_product=None, type_col=
     return "Lift Kit"
 
 
-def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year, gen, trim, type_col=None):
+def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year, gen, trim, type_col=None, assembled=False):
     """
     Genera SEO Title según reglas de Carlos
-    Formato: MARCA_ABREVIADA SHOCK GENERACIÓN MODELO [TRIM] [LIFT/LEVELING Kit] RANGO_ALTURAS (AÑOS)
-    Máximo: 70 caracteres (nivel producto)
+    Formato: MARCA_ABREVIADA SHOCK GENERACIÓN MODELO [TRIM] [LIFT/LEVELING Kit] [w/ Strut Assembly] RANGO_ALTURAS (AÑOS)
+    Máximo: 70 caracteres (nivel producto). Para productos Assembly se ignora el límite.
     
     Ejemplo: "OME BP-51 5th Gen 4Runner Lift Kit 2-3" (2010-2024)"
     Ejemplo Leveling: "OME Nitro 3rd Gen 4Runner Leveling Kit 2" (1996-2002)"
+    Ejemplo Assembly: "OME BP-51 5th Gen 4Runner Lift Kit w/ Strut Assembly 2-3" (2010-2024)"
     """
     brand_abbr = get_shock_abbreviation(brand, shock_type)
     shock = normalize_shock_name(shock_type)
@@ -154,15 +156,18 @@ def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year,
     parts = [brand_abbr, shock, generation, model_clean]
     if trim_clean:
         parts.append(trim_clean)
-    parts.extend([kit_type, lift_formatted, year_formatted])
+    parts.append(kit_type)
+    if assembled:
+        parts.append(ASSEMBLY_TEXT)
+    parts.extend([lift_formatted, year_formatted])
     
     # Filtrar partes vacías
     parts = [p for p in parts if p]
     
     seo_title = " ".join(parts)
     
-    # Verificar límite de caracteres
-    if len(seo_title) > SEO_TITLE_MAX_LENGTH:
+    # Para productos Assembly, se ignora el límite de 70 caracteres
+    if not assembled and len(seo_title) > SEO_TITLE_MAX_LENGTH:
         # Si supera el límite, marcar con advertencia
         seo_title = f"{seo_title} [EXCEDE {SEO_TITLE_MAX_LENGTH} CHARS]"
     
@@ -182,15 +187,19 @@ def build_gmc_title(
     trim,
     type_col,
     internal_type=None,
+    assembled=False,
 ):
     """
     Genera GMC Title según reglas de Carlos
-    Formato: BRAND SHOCK GENERACIÓN MODELO [ENGINE] [DRIVE] [TRIM] [LIFT/LEVELING Kit] RANGO_ALTURAS (AÑOS), 
+    Formato: BRAND SHOCK GENERACIÓN MODELO [ENGINE] [DRIVE] [TRIM] [LIFT/LEVELING Kit] [w/ Strut Assembly] RANGO_ALTURAS (AÑOS), 
              MARCA_ABREVIADA TECNOLOGÍA_SHOCK, [SHOCK_ARCHITECTURE], [LEAF_SPRINGS], Suspension Upgrade
-    Máximo: 150 caracteres (nivel variante)
+    Máximo: 150 caracteres (nivel variante). Para productos Assembly el límite se mantiene pero el
+    fallback es más agresivo: primero se quita 'Suspension Upgrade' y como último recurso la tecnología
+    del shock (monotube/bypass/twintube) y su arquitectura.
     
     Ejemplo: "Old Man Emu MT64 5th Gen 4Runner Lift Kit 2-3" (2010-2024), OME Monotube Shocks, Suspension Upgrade"
     Ejemplo Leveling: "Old Man Emu Nitro 3rd Gen 4Runner Leveling Kit 2" (1996-2002), OME Twin Tube Shocks, Suspension Upgrade"
+    Ejemplo Assembly: "Old Man Emu BP-51 5th Gen 4Runner Lift Kit w/ Strut Assembly 2-3" (2010-2024), OME Bypass Shocks, Suspension Upgrade"
     """
     brand_clean = clean_str(brand) if brand else ""
     shock = normalize_shock_name(shock_type)
@@ -219,7 +228,10 @@ def build_gmc_title(
         parts.append(drive_clean)
     if trim_clean:
         parts.append(trim_clean)
-    parts.extend([kit_type, lift_formatted, year_formatted])
+    parts.append(kit_type)
+    if assembled:
+        parts.append(ASSEMBLY_TEXT)
+    parts.extend([lift_formatted, year_formatted])
     
     # Filtrar partes vacías
     parts = [p for p in parts if p]
@@ -228,39 +240,40 @@ def build_gmc_title(
     # Obtener tecnología y arquitectura del shock
     brand_abbr = get_shock_abbreviation(brand, shock_type)
     technology, architecture = get_shock_technology(shock_type)
+    has_leafs = has_leaf_springs(vdf_for_variant, type_col)
     
-    # Construir segunda parte (después de la coma)
-    tech_parts = []
-    if brand_abbr and technology:
-        tech_parts.append(f"{brand_abbr} {technology}")
-    if architecture:
-        tech_parts.append(architecture)
+    # Helper para reconstruir el título con distintas combinaciones de partes removibles
+    def build_full(with_suspension_upgrade, with_tech_description):
+        tech_parts = []
+        if with_tech_description:
+            if brand_abbr and technology:
+                tech_parts.append(f"{brand_abbr} {technology}")
+            if architecture:
+                tech_parts.append(architecture)
+        if has_leafs:
+            tech_parts.append("Rear Leaf Springs")
+        if with_suspension_upgrade:
+            tech_parts.append(GMC_ALTERNATIVE_TEXT)
+        
+        if tech_parts:
+            return f"{title_base}, {', '.join(tech_parts)}"
+        return title_base
     
-    # Verificar si tiene leaf springs
-    if has_leaf_springs(vdf_for_variant, type_col):
-        tech_parts.append("Rear Leaf Springs")
-    
-    # Agregar "Suspension Upgrade" al final
-    tech_parts.append(GMC_ALTERNATIVE_TEXT)
-    
-    # Combinar todo
-    if tech_parts:
-        gmc_title = f"{title_base}, {', '.join(tech_parts)}"
-    else:
-        gmc_title = title_base
+    # Construir título completo (con todo)
+    gmc_title = build_full(with_suspension_upgrade=True, with_tech_description=True)
     
     # Verificar límite de caracteres
     if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
-        # Si supera el límite, quitar "Suspension Upgrade"
-        if GMC_ALTERNATIVE_TEXT in tech_parts:
-            tech_parts.remove(GMC_ALTERNATIVE_TEXT)
-            if tech_parts:
-                gmc_title = f"{title_base}, {', '.join(tech_parts)}"
-            else:
-                gmc_title = title_base
+        # 1) Quitar "Suspension Upgrade" primero
+        gmc_title = build_full(with_suspension_upgrade=False, with_tech_description=True)
         
-        # Si aún supera el límite, marcar con advertencia
         if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
-            gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
+            if assembled:
+                # 2) Para Assembly, como último recurso quitar también la tecnología del shock
+                #    y su arquitectura (se mantiene "Rear Leaf Springs" si aplica, no es tech)
+                gmc_title = build_full(with_suspension_upgrade=False, with_tech_description=False)
+            else:
+                # Para no-Assembly, marcar con advertencia
+                gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
     
     return gmc_title

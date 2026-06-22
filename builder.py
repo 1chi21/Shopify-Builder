@@ -603,7 +603,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         
         seo_title = build_seo_title(
             vdf, brand, shock_name, lift_range, model, year, 
-            gen_val, trim_val
+            gen_val, trim_val, assembled=assembled_val
         )
 
         product_row = blank_row()
@@ -659,7 +659,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             gmc_title = build_gmc_title(
                 sku_rows, brand, shock_name, lift_val.replace(" inches", ""), 
                 model, year, gen_val_var, engine_val_var, drive_val_var, 
-                trim_val_var, type_col, internal_type=internal_type_var
+                trim_val_var, type_col, internal_type=internal_type_var,
+                assembled=assembled_val
             )
 
             # Override de Option2/Option3 Value: si el usuario edito el texto de la opcion,
@@ -867,18 +868,18 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         engine_val = clean_str(first.get(engine_col, "")) if engine_col and engine_col in vdf.columns else ""
         drive_val = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
         trim_val = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
+        # Detectar si el producto es ASS (assembled) basándose en los SKUs
+        assembled_val = "_assembled" in vdf.columns and vdf["_assembled"].iloc[0] == "ass"
         
         seo_title = build_seo_title(
             vdf, brand, shock_name, lift_range, model, year, 
-            gen_val, trim_val
+            gen_val, trim_val, assembled=assembled_val
         )
         
         # Generar handle (necesario para identificar el producto)
         title = build_title(brand, shock_name, lift_range, model, year)
         trim_val_handle = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
         drive_val_handle = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
-        # Detectar si el producto es ASS (assembled) basándose en los SKUs
-        assembled_val = "_assembled" in vdf.columns and vdf["_assembled"].iloc[0] == "ass"
         handle = build_handle(title, trim=trim_val_handle, drive=drive_val_handle, assembled=assembled_val)
         
         # Fila de producto con SEO Title
@@ -934,7 +935,8 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             gmc_title = build_gmc_title(
                 sku_rows, brand, shock_name, lift_range, 
                 model, year, gen_val_var, engine_val_var, drive_val_var, 
-                trim_val_var, type_col, internal_type=internal_type_var
+                trim_val_var, type_col, internal_type=internal_type_var,
+                assembled=assembled_val
             )
             
             variant_row = {

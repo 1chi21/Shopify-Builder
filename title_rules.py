@@ -43,3 +43,6 @@ GMC_TITLE_MAX_LENGTH = 150
 
 # Texto alternativo para GMC Title cuando supera límite
 GMC_ALTERNATIVE_TEXT = "Suspension Upgrade"
+
+# Texto que se inserta en SEO/GMC Title para productos con Assembly (-ASS en SKU)
+ASSEMBLY_TEXT = "w/ Strut Assembly"

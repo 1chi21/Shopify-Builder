@@ -2,9 +2,16 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.8.11"
+APP_VERSION = "1.9.0"
 
 CHANGELOG = """
+### v1.9.0 (2026-06-22)
+- **Assembly en SEO Title**: Productos con `-ASS` en el SKU ahora muestran `w/ Strut Assembly` justo después de `Lift Kit` y antes de la altura y los años (ej: `OME BP-51 5th Gen 4Runner Lift Kit w/ Strut Assembly 2-3" (2010-2024)`)
+- **Assembly en GMC Title**: Misma inserción `w/ Strut Assembly` en GMC Title (nivel variante)
+- **SEO Title sin límite para Assembly**: Para productos Assembly, el límite de 70 caracteres ya NO se aplica (no se agrega marcador `[EXCEDE]`)
+- **GMC Title Assembly con fallback agresivo**: Para productos Assembly, si el título supera 150 chars: primero se elimina `Suspension Upgrade` y como último recurso se elimina la tecnología del shock (Monotube/Bypass/Twin Tube Shocks) y su arquitectura (ej: Remote Reservoir, Adjustable Coilover)
+- **Aislamiento**: Productos no-Assembly mantienen el comportamiento anterior sin cambios
+
 ### v1.8.11 (2026-06-18)
 - **Editor de opciones de variantes**: Nueva seccion en Tab 1 despues del analisis. Permite editar el texto de Option2/Option3 Value (la capacidad de carga tipo "Standard (Up to 50 lbs)") para cada valor de Front Load y Rear Load detectado. Util cuando no todos los productos tienen las mismas capacidades.
 - **Inputs pre-llenados**: Cada input arranca con el valor mapeado por defecto; si lo editas, se usa el nuevo texto en el output.
