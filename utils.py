@@ -8,10 +8,15 @@ from datetime import datetime
 
 def clean_str(val):
     """
-    Limpia strings: convierte NaN, None, "N/A", "" a string vacío
+    Limpia strings: convierte NaN, None, "N/A", "" a string vacío.
+    Si el valor es datetime (o pd.Timestamp, subclase), extrae el año como string.
+    Esto evita que strings como "2018-07-01 00:00:00" terminen en títulos cuando
+    Excel formatea celdas de año como fecha.
     """
     if pd.isna(val):
         return ""
+    if isinstance(val, datetime):
+        return str(val.year)
     s = str(val).strip()
     if s.lower() in ("nan", "none", "n/a", ""):
         return ""

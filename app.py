@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.9.0"
+APP_VERSION = "1.9.1"
 
 CHANGELOG = """
+### v1.9.1 (2026-06-22)
+- **Bug fix datetime en títulos**: `clean_str` ahora detecta valores `datetime`/`pd.Timestamp` y los convierte a año como string (ej: `2018-07-01 00:00:00` → `2018`). Esto evita que strings datetime completos generados por Excel (cuando formatea celdas de año como fecha) terminen en los títulos SEO/GMC.
+- **Aislamiento**: Aplica a cualquier campo que pase por `clean_str` (Make, Model, Year, Brand, Gen, Engine, Drive, Trim, Shock, etc.)
+
 ### v1.9.0 (2026-06-22)
 - **Assembly en SEO Title**: Productos con `-ASS` en el SKU ahora muestran `w/ Strut Assembly` justo después de `Lift Kit` y antes de la altura y los años (ej: `OME BP-51 5th Gen 4Runner Lift Kit w/ Strut Assembly 2-3" (2010-2024)`)
 - **Assembly en GMC Title**: Misma inserción `w/ Strut Assembly` en GMC Title (nivel variante)
