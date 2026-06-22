@@ -333,7 +333,7 @@ def analyze_input(df):
     elif "Qty" in df.columns:
         info["qty_col"] = "Qty"
 
-    for c in ["Make", "Model", "Year", "Brand"]:
+    for c in ["Make", "Model", "Year", "Brand", "Gen", "Engine", "Drive", "Trim", "Shock"]:
         if c in df.columns:
             df[c] = df[c].apply(clean_str)
 
@@ -466,7 +466,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
     if trim_col is None and "Trim" in df.columns:
         trim_col = "Trim"
 
-    for c in ["Make", "Model", "Year", "Brand"]:
+    for c in ["Make", "Model", "Year", "Brand", "Gen", "Engine", "Drive", "Trim"]:
         if c in df.columns:
             df[c] = df[c].apply(clean_str)
 

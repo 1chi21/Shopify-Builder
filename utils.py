@@ -10,8 +10,9 @@ def clean_str(val):
     """
     Limpia strings: convierte NaN, None, "N/A", "" a string vacío.
     Si el valor es datetime (o pd.Timestamp, subclase), extrae el año como string.
+    Tambien detecta strings con formato datetime (YYYY-MM-DD...) y extrae el año.
     Esto evita que strings como "2018-07-01 00:00:00" terminen en títulos cuando
-    Excel formatea celdas de año como fecha.
+    Excel formatea celdas de año como fecha o cuando el valor llega como string.
     """
     if pd.isna(val):
         return ""
@@ -20,6 +21,10 @@ def clean_str(val):
     s = str(val).strip()
     if s.lower() in ("nan", "none", "n/a", ""):
         return ""
+    # Detectar string con formato datetime tipo "2018-07-01 00:00:00" o "2018-07-01"
+    m = re.match(r'^(\d{4})-\d{2}-\d{2}', s)
+    if m:
+        return m.group(1)
     return s
 
 

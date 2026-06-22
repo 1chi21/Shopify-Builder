@@ -80,6 +80,11 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.9.2 (2026-06-22)
+- **Bug fix datetime persistente**: Ademas de detectar objetos `datetime`/`pd.Timestamp`, `clean_str` ahora tambien detecta **strings con formato datetime** tipo `"2018-07-01 00:00:00"` o `"2018-07-01"` y extrae el año (ej: `"2018-07-01 00:00:00"` → `"2018"`). Esto cubre el caso donde el valor llega como string y no como objeto datetime.
+- **Limpieza a nivel de columna**: Las columnas `Gen`, `Engine`, `Drive`, `Trim` y `Shock` ahora se limpian con `clean_str` a nivel de columna en `analyze_input` y `build_matrixify_excel` (antes solo se limpiaban `Make/Model/Year/Brand`). Esto garantiza que todos los valores pasen por la limpieza, no solo los de la primera fila.
+- **Aislamiento**: El fix aplica a cualquier campo que pase por `clean_str` en cualquier tab.
+
 ### v1.9.1 (2026-06-22)
 - **Bug fix datetime en títulos**: `clean_str` ahora detecta valores `datetime`/`pd.Timestamp` y los convierte a año como string (ej: `2018-07-01 00:00:00` → `2018`). Esto evita que strings datetime completos generados por Excel (cuando formatea celdas de año como fecha) terminen en los títulos SEO/GMC.
 - **Aislamiento**: Aplica a cualquier campo que pase por `clean_str` (Make, Model, Year, Brand, Gen, Engine, Drive, Trim, Shock, etc.)
