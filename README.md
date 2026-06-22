@@ -80,6 +80,14 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.9.5 (2026-06-22)
+- **Bug fix rango de años 2 dígitos**: `get_generation` ahora también filtra rangos de años con 2 dígitos (ej: `"14-18"`, `"10-16"`) además de los de 4 dígitos. El regex cambió de `^\d{4}(-\d{2,4})?$` a `^\d{2,4}(-\d{2,4})?$` para cubrir ambos formatos.
+- **Aislamiento**: Productos con Gen válido (`"5thGen"`, `"4thGen"`, etc.) siguen funcionando.
+
+### v1.9.4 (2026-06-22)
+- **SEO Title sin límite para todos**: Se removió completamente el límite de 70 caracteres en SEO Title. Ya no se agrega `[EXCEDE 70 CHARS]` para NINGÚN producto (antes solo Assembly lo tenía sin límite).
+- **Aislamiento**: GMC Title mantiene su límite de 150 caracteres con fallbacks progresivos (Suspension Upgrade → tech description para Assembly).
+
 ### v1.9.3 (2026-06-22)
 - **Bug fix año duplicado en títulos**: `get_generation` ahora ignora valores que son años o rangos de años (ej: `"2018"`, `"2010-2016"`, `"2010-16"`) además de datetimes. Esto evita que el año aparezca duplicado en SEO/GMC Title (una vez en la posición de Gen y otra al final entre paréntesis).
 - **Aislamiento**: Solo afecta el campo Gen. Valores válidos como `"5thGen"`, `"4thGen"`, `"100 Series"` siguen funcionando normalmente.

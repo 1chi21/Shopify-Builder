@@ -8,7 +8,6 @@ from title_rules import (
     SHOCK_ABBREVIATIONS,
     SHOCK_TECHNOLOGY,
     GENERATION_MAP,
-    SEO_TITLE_MAX_LENGTH,
     GMC_TITLE_MAX_LENGTH,
     GMC_ALTERNATIVE_TEXT,
     ASSEMBLY_TEXT,
@@ -33,8 +32,9 @@ def get_generation(gen_value):
     # Si es un string que parece datetime (YYYY-MM-DD...), ignorar
     if re.match(r'^\d{4}-\d{2}-\d{2}', gen_str):
         return ""
-    # Si es un año o rango de años (ej: "2018", "2010-2016", "2010-16"), ignorar
-    if re.match(r'^\d{4}(-\d{2,4})?$', gen_str):
+    # Si es un año o rango de años (ej: "2018", "2010-2016", "2010-16", "14-18"), ignorar
+    # \d{2,4} acepta tanto 2 digitos (14-18) como 4 digitos (2010-2016)
+    if re.match(r'^\d{2,4}(-\d{2,4})?$', gen_str):
         return ""
     return GENERATION_MAP.get(gen_str, gen_str)
 
@@ -144,7 +144,7 @@ def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year,
     """
     Genera SEO Title según reglas de Carlos
     Formato: MARCA_ABREVIADA SHOCK GENERACIÓN MODELO [TRIM] [LIFT/LEVELING Kit] [w/ Strut Assembly] RANGO_ALTURAS (AÑOS)
-    Máximo: 70 caracteres (nivel producto). Para productos Assembly se ignora el límite.
+    Sin límite de caracteres (nivel producto).
     
     Ejemplo: "OME BP-51 5th Gen 4Runner Lift Kit 2-3" (2010-2024)"
     Ejemplo Leveling: "OME Nitro 3rd Gen 4Runner Leveling Kit 2" (1996-2002)"
@@ -180,10 +180,7 @@ def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year,
     
     seo_title = " ".join(parts)
     
-    # Para productos Assembly, se ignora el límite de 70 caracteres
-    if not assembled and len(seo_title) > SEO_TITLE_MAX_LENGTH:
-        # Si supera el límite, marcar con advertencia
-        seo_title = f"{seo_title} [EXCEDE {SEO_TITLE_MAX_LENGTH} CHARS]"
+    # Sin límite de caracteres para SEO Title
     
     return seo_title
 

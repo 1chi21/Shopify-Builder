@@ -38,7 +38,7 @@ GENERATION_MAP = {
 }
 
 # Límites de caracteres
-SEO_TITLE_MAX_LENGTH = 70
+# SEO_TITLE_MAX_LENGTH = 70  # Removido en v1.9.4: ya no hay límite en SEO Title
 GMC_TITLE_MAX_LENGTH = 150
 
 # Texto alternativo para GMC Title cuando supera límite
