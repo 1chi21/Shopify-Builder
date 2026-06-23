@@ -41,6 +41,59 @@ def get_generation(gen_value):
     return GENERATION_MAP.get(gen_str, gen_str)
 
 
+def get_landcruiser_abbreviation(model):
+    """
+    Extrae la abreviatura de Land Cruiser del modelo.
+    Ejemplo: "Land Cruiser 100" -> "LC100", "LandCruiser250" -> "LC250",
+              "100 Series Land Cruiser" -> "LC100", "LandCruiser80&105Series" -> "LC80"
+    Retorna string vacío si no es un Land Cruiser.
+    Se usa para agregar "LC{n}" en el GMC title antes de "Suspension Upgrade".
+    """
+    if not model:
+        return ""
+    s = str(model)
+    # Pattern 1: numero DESPUES de "Land Cruiser" (ej: "LandCruiser100", "Land Cruiser 100")
+    m = re.search(r'[Ll]and\s*[Cc]ruiser\s*(\d+)', s)
+    if m:
+        return f"LC{m.group(1)}"
+    # Pattern 2: numero ANTES de "Land Cruiser" con "Series" (ej: "100 Series Land Cruiser")
+    m = re.search(r'(\d+)\s*[Ss]eries?\s*[Ll]and\s*[Cc]ruiser', s)
+    if m:
+        return f"LC{m.group(1)}"
+    return ""
+
+
+def is_non_rubicon(trim_value):
+    """
+    Detecta si el trim es "Non Rubicon" (versión por defecto de Rubicon).
+    Según Carlos: cuando el trim dice "Non Rubicon" NO lo agregamos al título,
+    pero si dice "Rubicon" sí. La Non Rubicon es la versión por defecto.
+    """
+    if pd.isna(trim_value):
+        return False
+    return str(trim_value).strip().lower() == "non rubicon"
+
+
+def count_models_in_string(model_str):
+    """
+    Cuenta la cantidad de modelos en un string separados por coma, slash, o "y".
+    Ejemplo: "Bronco Base, Big Bend, Outer Banks, Wildtrack" -> 4
+              "Hilux Vigo" -> 1
+              "Bronco Black Diamond, Badlands" -> 2
+              "Hilux REVO/ROCCO/SR5" -> 3
+    Se usa para detectar default vs caso especial en productos multi-modelo.
+    """
+    if not model_str or pd.isna(model_str):
+        return 0
+    s = str(model_str).strip()
+    if not s:
+        return 0
+    # Separar por coma, slash, o " y " (Spanish for "and")
+    parts = re.split(r'[,/]|\s+y\s+', s, flags=re.IGNORECASE)
+    parts = [p.strip() for p in parts if p.strip()]
+    return len(parts)
+
+
 def normalize_shock_name(shock_type):
     """
     Normaliza el nombre del shock.
@@ -170,7 +223,9 @@ def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year,
     
     # Construir título
     parts = [brand_abbr, shock, generation, model_clean]
-    if trim_clean:
+    # Regla Carlos: Non Rubicon NO se agrega (es la version por defecto).
+    # Solo Rubicon (u otros trims validos) se agregan al titulo.
+    if trim_clean and not is_non_rubicon(trim_clean):
         parts.append(trim_clean)
     parts.append(kit_type)
     if assembled:
@@ -239,7 +294,9 @@ def build_gmc_title(
         parts.append(engine_clean)
     if drive_clean:
         parts.append(drive_clean)
-    if trim_clean:
+    # Regla Carlos: Non Rubicon NO se agrega (es la version por defecto).
+    # Solo Rubicon (u otros trims validos) se agregan al titulo.
+    if trim_clean and not is_non_rubicon(trim_clean):
         parts.append(trim_clean)
     parts.append(kit_type)
     if assembled:
@@ -254,6 +311,9 @@ def build_gmc_title(
     brand_abbr = get_shock_abbreviation(brand, shock_type)
     technology, architecture = get_shock_technology(shock_type)
     has_leafs = has_leaf_springs(vdf_for_variant, type_col)
+    # Regla Carlos: para Land Cruiser, agregar abreviatura "LC{n}" antes de "Suspension Upgrade"
+    # Ej: "Land Cruiser 100" -> "LC100", "LandCruiser250" -> "LC250"
+    landcruiser_abbr = get_landcruiser_abbreviation(model)
     
     # Helper para reconstruir el título con distintas combinaciones de partes removibles
     def build_full(with_suspension_upgrade, with_tech_description):
@@ -265,6 +325,9 @@ def build_gmc_title(
                 tech_parts.append(architecture)
         if has_leafs:
             tech_parts.append("Rear Leaf Springs")
+        if landcruiser_abbr:
+            # Va justo antes de "Suspension Upgrade"
+            tech_parts.append(landcruiser_abbr)
         if with_suspension_upgrade:
             tech_parts.append(GMC_ALTERNATIVE_TEXT)
         

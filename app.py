@@ -2,12 +2,16 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.9.6"
+APP_VERSION = "1.10.0"
 
 CHANGELOG = """
+### v1.10.0 (2026-06-22)
+- **Land Cruiser GMC**: Nuevo helper `get_landcruiser_abbreviation()` que extrae `LC{n}` del modelo (ej: `"LandCruiser250"` → `LC250`, `"100 Series Land Cruiser"` → `LC100`). Se agrega antes de "Suspension Upgrade" en el GMC title (ej: `... OME Monotube Shocks LC250 Suspension Upgrade`).
+- **Non Rubicon filtrado**: Nuevo helper `is_non_rubicon()`. Cuando el trim es "Non Rubicon" NO se agrega al título (es la versión por defecto de Rubicon). Solo "Rubicon" (u otros trims válidos) aparecen en el título.
+- **Multi-modelo count helper**: Nuevo helper `count_models_in_string()` que cuenta modelos separados por coma, slash, o "y" (ej: `"Hilux REVO/ROCCO/SR5"` → 3). Helper disponible para identificar default vs caso especial.
+- **Aislamiento**: Reglas Land Cruiser y Non Rubicon solo aplican cuando el modelo/trim matchea. Productos no-Land Cruiser o con otro trim no se ven afectados.
+
 ### v1.9.6 (2026-06-22)
-- **Debug logs en get_generation**: Se agregaron prints de debug para confirmar que el filtro de Gen se está aplicando. Visible en los logs de Streamlit Cloud.
-- **Aislamiento**: Solo agrega logging, no cambia el comportamiento.
 
 ### v1.9.5 (2026-06-22)
 - **Bug fix rango de años 2 dígitos**: `get_generation` ahora también filtra rangos de años con 2 dígitos (ej: `"14-18"`, `"10-16"`) además de los de 4 dígitos. El regex cambió de `^\d{4}(-\d{2,4})?$` a `^\d{2,4}(-\d{2,4})?$` para cubrir ambos formatos.
