@@ -2,9 +2,15 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.10.0"
+APP_VERSION = "1.10.1"
 
 CHANGELOG = """
+### v1.10.1 (2026-06-22)
+- **Regla multi-modelo aplicada al título**: `build_seo_title` y `build_gmc_title` ahora usan `get_model_for_title()` que aplica la regla de Carlos:
+  - **Default (3+ modelos)**: usa SOLO la marca (ej: `"BroncoBase,BigBend,OuterBanks,Wildtrack(2.7engine)"` → `"Bronco"`)
+  - **Especial (<3 modelos)**: deja el modelo completo (ej: `"BroncoBlackDiamond,Badlands"` → tal cual)
+- **Nuevo helper `extract_brand_from_model`**: extrae la marca de modelos concatenados usando una lista de marcas conocidas (Bronco, Hilux, LandCruiser, 4Runner, etc.)
+
 ### v1.10.0 (2026-06-22)
 - **Land Cruiser GMC**: Nuevo helper `get_landcruiser_abbreviation()` que extrae `LC{n}` del modelo (ej: `"LandCruiser250"` → `LC250`, `"100 Series Land Cruiser"` → `LC100`). Se agrega antes de "Suspension Upgrade" en el GMC title (ej: `... OME Monotube Shocks LC250 Suspension Upgrade`).
 - **Non Rubicon filtrado**: Nuevo helper `is_non_rubicon()`. Cuando el trim es "Non Rubicon" NO se agrega al título (es la versión por defecto de Rubicon). Solo "Rubicon" (u otros trims válidos) aparecen en el título.

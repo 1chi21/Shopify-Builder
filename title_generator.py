@@ -94,6 +94,63 @@ def count_models_in_string(model_str):
     return len(parts)
 
 
+# Marcas conocidas para extraer del modelo cuando es multi-modelo
+# (el input suele tener la marca concatenada: "BroncoBase,BigBend,...")
+KNOWN_BRANDS = [
+    "LandCruiser", "Land Cruiser", "WranglerJK", "WranglerJL", "WranglerTJ", "WranglerLJ",
+    "FJCruiser", "4Runner", "LX450", "LX470", "LX570", "GX470", "GX460",
+    "Bronco", "Hilux", "Tacoma", "Tundra", "Patrol", "Defender",
+    "Frontier", "Pathfinder", "Ranger", "Fortuner", "Navara",
+    "Pajero", "Triton", "Everest", "BT-50", "D-Max", "Mu-X",
+    "Discovery", "G-Wagon", "X-Trail",
+]
+
+
+def extract_brand_from_model(model):
+    """
+    Extrae la marca del modelo (la primera palabra cuando el modelo es multi-modelo).
+    Ejemplo: "BroncoBase,BigBend,OuterBanks,Wildtrack" -> "Bronco"
+              "HiluxREVO/ROCCO/SR5" -> "Hilux"
+              "LandCruiser100Series" -> "LandCruiser"
+              "4Runner" -> "4Runner" (no se aplica la logica multi-modelo)
+    """
+    if not model or pd.isna(model):
+        return ""
+    s = str(model).strip()
+    if not s:
+        return ""
+    # Buscar la marca mas larga que haga match al inicio
+    for brand in sorted(KNOWN_BRANDS, key=len, reverse=True):
+        if s.startswith(brand):
+            return brand
+    return s
+
+
+def get_model_for_title(model):
+    """
+    Devuelve el model a usar en el titulo segun la regla multi-modelo de Carlos.
+    - Si tiene 3+ modelos: devuelve SOLO la marca (ej: "Bronco")
+      (default: producto que cubre mas modelos)
+    - Si tiene menos: devuelve el model completo (caso especial)
+    
+    Ejemplo:
+    - "Bronco Base, Big Bend, Outer Banks, Wildtrack" -> "Bronco" (4 modelos)
+    - "Bronco Black Diamond, Badlands" -> "Bronco Black Diamond, Badlands" (2 modelos)
+    - "Hilux REVO/ROCCO/SR5" -> "Hilux" (3 modelos)
+    - "Hilux Vigo" -> "Hilux Vigo" (1 modelo)
+    - "LandCruiser100Series" -> "LandCruiser100Series" (1 modelo)
+    """
+    if not model or pd.isna(model):
+        return ""
+    s = str(model).strip()
+    if not s:
+        return ""
+    count = count_models_in_string(s)
+    if count >= 3:
+        return extract_brand_from_model(s)
+    return s
+
+
 def normalize_shock_name(shock_type):
     """
     Normaliza el nombre del shock.
@@ -208,7 +265,8 @@ def build_seo_title(vdf_for_product, brand, shock_type, lift_range, model, year,
     brand_abbr = get_shock_abbreviation(brand, shock_type)
     shock = normalize_shock_name(shock_type)
     generation = get_generation(gen)
-    model_clean = clean_str(model) if model else ""
+    # Regla Carlos multi-modelo: si tiene 3+ modelos usar solo la marca
+    model_clean = get_model_for_title(model)
     trim_clean = clean_str(trim) if trim else ""
     
     # Determinar si es Leveling Kit o Lift Kit
@@ -272,7 +330,8 @@ def build_gmc_title(
     brand_clean = clean_str(brand) if brand else ""
     shock = normalize_shock_name(shock_type)
     generation = get_generation(gen)
-    model_clean = clean_str(model) if model else ""
+    # Regla Carlos multi-modelo: si tiene 3+ modelos usar solo la marca
+    model_clean = get_model_for_title(model)
     engine_clean = clean_str(engine) if engine else ""
     drive_clean = clean_str(drive) if drive else ""
     trim_clean = clean_str(trim) if trim else ""
