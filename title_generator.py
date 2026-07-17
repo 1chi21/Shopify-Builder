@@ -11,6 +11,7 @@ from title_rules import (
     GMC_TITLE_MAX_LENGTH,
     GMC_ALTERNATIVE_TEXT,
     ASSEMBLY_TEXT,
+    BILSTEIN_SHOCK_TECH,
 )
 from utils import clean_str, build_lift_range
 
@@ -33,9 +34,10 @@ def get_generation(gen_value):
     if re.match(r'^\d{4}-\d{2}-\d{2}', gen_str):
         print(f"[DEBUG get_generation] Gen filtrado (datetime-like): {gen_str!r}")
         return ""
-    # Si es un año o rango de años (ej: "2018", "2010-2016", "2010-16", "14-18"), ignorar
+    # Si es un año o rango de años (ej: "2018", "2010-2016", "2010-16", "14-18", "19-ON"), ignorar
     # \d{2,4} acepta tanto 2 digitos (14-18) como 4 digitos (2010-2016)
-    if re.match(r'^\d{2,4}(-\d{2,4})?$', gen_str):
+    # (-\d{2,4}|-ON) acepta "19-ON" (year onwards) y "19-18" (year range)
+    if re.match(r'^\d{2,4}(-\d{2,4}|-ON)?$', gen_str):
         print(f"[DEBUG get_generation] Gen filtrado (year/range): {gen_str!r}")
         return ""
     return GENERATION_MAP.get(gen_str, gen_str)
@@ -411,4 +413,196 @@ def build_gmc_title(
                 # Para no-Assembly, marcar con advertencia
                 gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
     
+    return gmc_title
+
+
+# ============================================================
+# BILSTEIN - Reglas específicas para productos Bilstein
+# ============================================================
+
+def is_bilstein(brand):
+    """
+    Verifica si la marca es Bilstein (case-insensitive).
+    Segun Carlos: las reglas de titulo dependen de la marca.
+    """
+    if not brand or pd.isna(brand):
+        return False
+    return str(brand).strip().lower() == "bilstein"
+
+
+def get_bilstein_shocks(vdf, shock_col, position_col):
+    """
+    Extrae los shocks front y rear de un grupo de productos Bilstein.
+    Retorna (front_shock, rear_shock).
+    Reglas de Carlos:
+    - Si solo hay un shock (ej: 5100), es siempre el FRONT
+    - Si hay dos, el primero en el SKU es el front y el segundo el rear
+    - Si front y rear son iguales, se muestra una sola vez
+    """
+    if not shock_col or shock_col not in vdf.columns:
+        return ("", "")
+    if not position_col or position_col not in vdf.columns:
+        # Si no hay Position, asumir que el shock del primer row es el front
+        return (clean_str(vdf.iloc[0].get(shock_col, "")), "")
+    
+    front_rows = vdf[vdf[position_col].astype(str).str.strip().str.lower() == "front"]
+    rear_rows = vdf[vdf[position_col].astype(str).str.strip().str.lower() == "rear"]
+    
+    front_shock = clean_str(front_rows.iloc[0].get(shock_col, "")) if len(front_rows) > 0 else ""
+    rear_shock = clean_str(rear_rows.iloc[0].get(shock_col, "")) if len(rear_rows) > 0 else ""
+    
+    return (front_shock, rear_shock)
+
+
+def format_bilstein_shocks(front_shock, rear_shock):
+    """
+    Formatea los shocks para mostrar en el titulo Bilstein.
+    - Si front y rear son iguales: solo "front" (ej: "5100")
+    - Si front y rear son diferentes: "front/rear" (ej: "6112/5160")
+    - Si solo hay front: "front"
+    - Si solo hay rear: "front" (regla Carlos: uno solo siempre es front)
+    """
+    if not front_shock and not rear_shock:
+        return ""
+    if not front_shock:
+        # Regla Carlos: uno solo siempre es front
+        return rear_shock
+    if not rear_shock:
+        return front_shock
+    if front_shock == rear_shock:
+        return front_shock
+    return f"{front_shock}/{rear_shock}"
+
+
+def get_bilstein_shock_tech(front_shock, rear_shock):
+    """
+    Obtiene las tecnologias front y rear de un shock Bilstein.
+    Retorna (front_tech, rear_tech).
+    Usa el mapeo BILSTEIN_SHOCK_TECH de title_rules.py.
+    """
+    front_tech = BILSTEIN_SHOCK_TECH.get(str(front_shock).strip(), {}).get("front", "")
+    rear_tech = BILSTEIN_SHOCK_TECH.get(str(rear_shock).strip(), {}).get("rear", "")
+    return (front_tech, rear_tech)
+
+
+def get_generation_bilstein(gen_value):
+    """
+    DEPRECATED: usar get_generation() en su lugar.
+    Se conserva por compatibilidad pero ya no se usa en el flujo principal.
+    """
+    if pd.isna(gen_value):
+        return ""
+    return clean_str(gen_value)
+
+
+def is_bilstein_assembled(vdf):
+    """
+    Verifica si el producto Bilstein es assembled (tiene -ASS en el SKU).
+    Aplica la precaucion de Assembly para cualquier marca.
+    """
+    if "Parent Sku" in vdf.columns:
+        sku = str(vdf.iloc[0].get("Parent Sku", ""))
+        if "-ASS" in sku.upper():
+            return True
+    if "Assembly" in vdf.columns:
+        assembly = str(vdf.iloc[0].get("Assembly", "")).strip().upper()
+        if assembly in ("ASS", "ASSEMBLED", "YES", "SI", "TRUE", "1"):
+            return True
+    return False
+
+
+def build_bilstein_seo_title(vdf, model, year, gen, height, internal_type,
+                             front_shock, rear_shock, type_col=None):
+    """
+    Construye el SEO Title para productos Bilstein.
+    Formato: Bilstein {shocks} {model} {gen} {internal_type} {height} ({year})
+    Ejemplo: Bilstein 6112/5160 4Runner 5th Gen Lift Kit 1-3" (2010-2024)
+    No se aplica LC100 (Land Cruiser), Non Rubicon, ni multi-modelo.
+    """
+    shocks_str = format_bilstein_shocks(front_shock, rear_shock)
+    
+    # Usar internal_type si esta disponible, sino determine_kit_type
+    if internal_type:
+        kit_type = internal_type
+    else:
+        kit_type = determine_kit_type(vdf_for_product=vdf, type_col=type_col)
+    
+    # Formatear height: siempre agregar " al final (el input de Bilstein no trae " inch")
+    if height:
+        h = height.replace(" inch", "").strip()
+        height_formatted = f'{h}"'
+    else:
+        height_formatted = ""
+    year_formatted = f"({year})" if year else ""
+
+    # Regla Carlos: si hay generacion (ej: "5th Gen", "5thGen") la pone,
+    # si no la hay (es un año/rango) la omite para evitar duplicar con el year del final
+    gen_clean = get_generation(gen)
+
+    parts = ["Bilstein", shocks_str, model, gen_clean, kit_type, height_formatted, year_formatted]
+
+    # Assembly: precaucion para cualquier marca
+    if is_bilstein_assembled(vdf):
+        parts.insert(-2, ASSEMBLY_TEXT)  # Antes de height y year
+
+    parts = [p for p in parts if p]
+    return " ".join(parts)
+
+
+def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
+                             front_shock, rear_shock, type_col=None):
+    """
+    Construye el GMC Title para productos Bilstein.
+    Formato: Bilstein {shocks} {model} {gen} {internal_type} {height} ({year}) {front_tech}, {rear_tech}
+    Sin "Suspension Upgrade" (diferente de OME).
+    El front tech lleva prefijo "Front", el rear tech no lleva prefijo.
+    Limite: 150 chars (mismo que OME) con fallback progresivo.
+    """
+    shocks_str = format_bilstein_shocks(front_shock, rear_shock)
+    
+    if internal_type:
+        kit_type = internal_type
+    else:
+        kit_type = determine_kit_type(vdf_for_product=vdf, type_col=type_col)
+    
+    # Formatear height: siempre agregar " al final
+    if height:
+        h = height.replace(" inch", "").strip()
+        height_formatted = f'{h}"'
+    else:
+        height_formatted = ""
+    year_formatted = f"({year})" if year else ""
+
+    # Regla Carlos: si hay generacion la pone, si es año la omite (queda solo el year del final)
+    gen_clean = get_generation(gen)
+
+    # Base part
+    parts = ["Bilstein", shocks_str, model, gen_clean, kit_type, height_formatted, year_formatted]
+    if is_bilstein_assembled(vdf):
+        parts.insert(-2, ASSEMBLY_TEXT)
+    parts = [p for p in parts if p]
+    title_base = " ".join(parts)
+    
+    # Tech part (con prefijo "Front" solo en el front)
+    front_tech, rear_tech = get_bilstein_shock_tech(front_shock, rear_shock)
+    
+    tech_parts = []
+    if front_tech:
+        tech_parts.append(f"Front {front_tech}")
+    if rear_tech:
+        tech_parts.append(rear_tech)
+    
+    if tech_parts:
+        gmc_title = f"{title_base}, {', '.join(tech_parts)}"
+    else:
+        gmc_title = title_base
+    
+    # Limite de caracteres (mismo que OME: 150)
+    if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
+        # Fallback: quitar tech descriptions
+        gmc_title = title_base
+        if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
+            gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
+    
+    return gmc_title
     return gmc_title

@@ -46,3 +46,14 @@ GMC_ALTERNATIVE_TEXT = "Suspension Upgrade"
 
 # Texto que se inserta en SEO/GMC Title para productos con Assembly (-ASS en SKU)
 ASSEMBLY_TEXT = "w/ Strut Assembly"
+
+# Mapeo de shocks Bilstein a tecnologia Front/Rear
+# Segun archivo de referencia SEO_GMC Titles - BILSTEIN.xlsx
+# Usado para construir el GMC Title de productos Bilstein
+BILSTEIN_SHOCK_TECH = {
+    "5100": {"front": "Adjustable Shocks", "rear": "Monotube Shocks"},
+    "5160": {"front": "", "rear": "Remote Reservoir Shocks"},
+    "6112": {"front": "Adjustable Coilover", "rear": ""},
+    "8100": {"front": "", "rear": "Bypass Shocks / DSA Shocks"},
+    "8112": {"front": "Zone Control Shocks / DSA Shocks", "rear": ""},
+}

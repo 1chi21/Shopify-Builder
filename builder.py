@@ -3,7 +3,11 @@ import numpy as np
 import re
 import io
 from datetime import datetime, timezone
-from title_generator import build_seo_title, build_gmc_title
+from title_generator import (
+    build_seo_title, build_gmc_title,
+    is_bilstein, get_bilstein_shocks, get_generation_bilstein,
+    build_bilstein_seo_title, build_bilstein_gmc_title,
+)
 from utils import clean_str, build_lift_range, extract_height_str_from_sku
 
 
@@ -472,12 +476,15 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
     if lift_col and lift_col in df.columns:
         df[lift_col] = df[lift_col].apply(normalize_lift_value)
-        # Fallback: si la columna Height quedo vacia (datos sucios como datetime/NaN),
-        # intentar extraer la altura del Parent Sku (patron -XXXX-{altura}LEV$)
+        # Fallback: si la columna Height quedo vacia O es solo un año (ej: "2026" de datetime),
+        # intentar extraer la altura del Parent Sku (patron -XXXX-{altura}LEV$).
+        # Un año de 4 digitos NO es un height valido, debe disparar el fallback.
         if "Parent Sku" in df.columns:
-            empty_mask = df[lift_col].apply(lambda x: not clean_str(x))
-            if empty_mask.any():
-                df.loc[empty_mask, lift_col] = df.loc[empty_mask, "Parent Sku"].apply(
+            empty_or_year_mask = df[lift_col].apply(
+                lambda x: not clean_str(x) or re.match(r'^\d{4}$', clean_str(x)) is not None
+            )
+            if empty_or_year_mask.any():
+                df.loc[empty_or_year_mask, lift_col] = df.loc[empty_or_year_mask, "Parent Sku"].apply(
                     extract_height_str_from_sku
                 )
 
@@ -600,11 +607,22 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         engine_val = clean_str(first.get(engine_col, "")) if engine_col and engine_col in vdf.columns else ""
         drive_val = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
         trim_val = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
+        internal_type_val = clean_str(first.get("Internal Type", "")) if "Internal Type" in vdf.columns else ""
         
-        seo_title = build_seo_title(
-            vdf, brand, shock_name, lift_range, model, year, 
-            gen_val, trim_val, assembled=assembled_val
-        )
+        # Detectar marca y rutear a las funciones correctas
+        if is_bilstein(brand):
+            # Reglas Bilstein: front/rear shocks, Gen = años sin filtrar
+            front_shock, rear_shock = get_bilstein_shocks(vdf, shock_col, position_col)
+            seo_title = build_bilstein_seo_title(
+                vdf, model, year, gen_val, lift_range, internal_type_val,
+                front_shock, rear_shock, type_col
+            )
+        else:
+            # Reglas OME (existentes)
+            seo_title = build_seo_title(
+                vdf, brand, shock_name, lift_range, model, year,
+                gen_val, trim_val, assembled=assembled_val
+            )
 
         product_row = blank_row()
         product_row.update({
@@ -655,13 +673,23 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             drive_val_var = clean_str(row.get(drive_col, "")) if drive_col and drive_col in row else ""
             trim_val_var = clean_str(row.get(trim_col, "")) if trim_col and trim_col in row else ""
             internal_type_var = clean_str(row.get("Internal Type", "")) if "Internal Type" in row else ""
-            
-            gmc_title = build_gmc_title(
-                sku_rows, brand, shock_name, lift_val.replace(" inches", ""), 
-                model, year, gen_val_var, engine_val_var, drive_val_var, 
-                trim_val_var, type_col, internal_type=internal_type_var,
-                assembled=assembled_val
-            )
+
+            # Detectar marca y rutear a las funciones correctas
+            if is_bilstein(brand):
+                # Reglas Bilstein: front/rear shocks
+                front_shock, rear_shock = get_bilstein_shocks(sku_rows, shock_col, position_col)
+                gmc_title = build_bilstein_gmc_title(
+                    sku_rows, model, year, gen_val_var, lift_val.replace(" inches", ""),
+                    internal_type_var, front_shock, rear_shock, type_col
+                )
+            else:
+                # Reglas OME (existentes)
+                gmc_title = build_gmc_title(
+                    sku_rows, brand, shock_name, lift_val.replace(" inches", ""),
+                    model, year, gen_val_var, engine_val_var, drive_val_var,
+                    trim_val_var, type_col, internal_type=internal_type_var,
+                    assembled=assembled_val
+                )
 
             # Override de Option2/Option3 Value: si el usuario edito el texto de la opcion,
             # usar el override. effective_key = mapped_value si existe, sino el raw value.
@@ -868,13 +896,24 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         engine_val = clean_str(first.get(engine_col, "")) if engine_col and engine_col in vdf.columns else ""
         drive_val = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
         trim_val = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
+        internal_type_val = clean_str(first.get("Internal Type", "")) if "Internal Type" in vdf.columns else ""
         # Detectar si el producto es ASS (assembled) basándose en los SKUs
         assembled_val = "_assembled" in vdf.columns and vdf["_assembled"].iloc[0] == "ass"
-        
-        seo_title = build_seo_title(
-            vdf, brand, shock_name, lift_range, model, year, 
-            gen_val, trim_val, assembled=assembled_val
-        )
+
+        # Detectar marca y rutear a las funciones correctas
+        if is_bilstein(brand):
+            # Reglas Bilstein: front/rear shocks, Gen = años sin filtrar
+            front_shock_seo, rear_shock_seo = get_bilstein_shocks(vdf, shock_col, position_col)
+            seo_title = build_bilstein_seo_title(
+                vdf, model, year, gen_val, lift_range, internal_type_val,
+                front_shock_seo, rear_shock_seo, type_col
+            )
+        else:
+            # Reglas OME (existentes)
+            seo_title = build_seo_title(
+                vdf, brand, shock_name, lift_range, model, year,
+                gen_val, trim_val, assembled=assembled_val
+            )
         
         # Generar handle (necesario para identificar el producto)
         title = build_title(brand, shock_name, lift_range, model, year)
@@ -931,13 +970,23 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             drive_val_var = clean_str(row.get(drive_col, "")) if drive_col and drive_col in row else ""
             trim_val_var = clean_str(row.get(trim_col, "")) if trim_col and trim_col in row else ""
             internal_type_var = clean_str(row.get("Internal Type", "")) if "Internal Type" in row else ""
-            
-            gmc_title = build_gmc_title(
-                sku_rows, brand, shock_name, lift_range, 
-                model, year, gen_val_var, engine_val_var, drive_val_var, 
-                trim_val_var, type_col, internal_type=internal_type_var,
-                assembled=assembled_val
-            )
+
+            # Detectar marca y rutear a las funciones correctas
+            if is_bilstein(brand):
+                # Reglas Bilstein: front/rear shocks
+                front_shock_gmc, rear_shock_gmc = get_bilstein_shocks(sku_rows, shock_col, position_col)
+                gmc_title = build_bilstein_gmc_title(
+                    sku_rows, model, year, gen_val_var, lift_range,
+                    internal_type_var, front_shock_gmc, rear_shock_gmc, type_col
+                )
+            else:
+                # Reglas OME (existentes)
+                gmc_title = build_gmc_title(
+                    sku_rows, brand, shock_name, lift_range,
+                    model, year, gen_val_var, engine_val_var, drive_val_var,
+                    trim_val_var, type_col, internal_type=internal_type_var,
+                    assembled=assembled_val
+                )
             
             variant_row = {
                 "ID": pk,

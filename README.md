@@ -80,6 +80,28 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.11.1 (2026-07-17)
+- **Regla Gen para Bilstein**: Si el Gen tiene una generacion (ej: "5th Gen", "5thGen") se muestra en el titulo. Si no la tiene (es un año/rango como "14-18", "19-ON", "2010-2024") se omite para evitar duplicar con el year del final. Aplica tanto a SEO como a GMC.
+- **Regex de año mejorada en get_generation**: Ahora tambien matchea sufijos "-ON" (year onwards) en el Gen, no solo rangos numericos como "14-18" o "2010-2016".
+- **DEPRECATED**: `get_generation_bilstein` ya no se usa en el flujo principal (las funciones Bilstein ahora usan `get_generation` directamente).
+
+### v1.11.0 (2026-07-17)
+- **Arquitectura por marca (OME vs Bilstein)**: Se detecta la marca del producto (columna `Brand`) y se aplican reglas distintas para cada una.
+- **Reglas Bilstein implementadas**:
+  - `is_bilstein(brand)` - detecta marca Bilstein (case-insensitive)
+  - `get_bilstein_shocks(vdf, shock_col, position_col)` - extrae front/rear shocks segun Position (Front/Rear)
+  - `format_bilstein_shocks(front, rear)` - formatea "front/rear", "front" si son iguales, o solo el existente
+  - `get_bilstein_shock_tech(front, rear)` - mapea shock a tecnologia (5100→Adjustable/Monotube, 5160→-/Remote Reservoir, 6112→Adjustable Coilover/-, 8100→-/Bypass DSA, 8112→Zone Control/-)
+  - `get_generation_bilstein(gen)` - para Bilstein, NO filtra años del Gen (muestra "14-18" tal cual)
+  - `is_bilstein_assembled(vdf)` - detecta "-ASS" en SKU o Assembly="ASS"
+  - `build_bilstein_seo_title(...)` - formato: `Bilstein {shocks} {model} {gen} {internal_type} {height}" ({year})`
+  - `build_bilstein_gmc_title(...)` - formato: `... {front_tech}, {rear_tech}` con prefijo "Front" solo en el front tech. Sin "Suspension Upgrade" (diferente de OME)
+- **Tabla `BILSTEIN_SHOCK_TECH`** agregada a `title_rules.py` con el mapeo de shock a tecnologia front/rear.
+- **Fallback de Height mejorado**: Ahora tambien dispara cuando el valor es solo un año de 4 digitos (ej: "2026" de datetime), no solo cuando esta vacio. Extrae el height real del SKU.
+- **Ruteo en builder.py**: `build_matrixify_excel` y `build_seo_gmc_only` ahora detectan Bilstein y llaman a las funciones correspondientes.
+- **Aislamiento**: Productos OME siguen usando las reglas existentes. Productos de otras marcas (Toyota, Dobinsons, etc.) usan las reglas OME por default.
+- **Limite de caracteres**: Mismo que OME (GMC 150 con fallback, SEO sin limite).
+
 ### v1.10.1 (2026-06-22)
 - **Regla multi-modelo aplicada al título**: `build_seo_title` y `build_gmc_title` ahora usan `get_model_for_title()` que aplica la regla de Carlos:
   - **Default (3+ modelos)**: usa SOLO la marca (ej: `"BroncoBase,BigBend,OuterBanks,Wildtrack(2.7engine)"` → `"Bronco"`)
