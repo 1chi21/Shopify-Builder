@@ -2,9 +2,12 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.11.5"
+APP_VERSION = "1.11.6"
 
 CHANGELOG = """
+### v1.11.6 (2026-07-20)
+- **Bug fix Shock Type combinado Bilstein**: El archivo "ALL BILSTEIN .xlsx" tiene el `Shock Type` con valores combinados como `"6112/5100"`, `"8112/5160"` (front/rear en una sola celda). La funcion `get_bilstein_shocks` ahora detecta esto y parsea directamente: primer numero = front, segundo = rear. Antes buscaba por Position y encontraba el mismo valor combinado para ambos, devolviendo el shock incorrecto.
+
 ### v1.11.5 (2026-07-17)
 - **Bug fix agrupamiento Bilstein**: El `_veh` (llave de agrupamiento) ya NO incluye el `Shock Type` cuando la marca es Bilstein. Esto es porque para Bilstein el shock es per-position (Front/Rear), no por producto. Si se incluía, los rows con Front=6112 y Rear=5100 quedaban en grupos separados y `get_bilstein_shocks` no encontraba ambos shocks.
 - **Fix en `build_seo_gmc_only` y `build_matrixify_excel`**: Ambos lugares verifican si todos los rows son Bilstein y excluyen el shock del agrupamiento en ese caso.

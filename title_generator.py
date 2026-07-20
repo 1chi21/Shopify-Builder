@@ -434,23 +434,39 @@ def get_bilstein_shocks(vdf, shock_col, position_col):
     """
     Extrae los shocks front y rear de un grupo de productos Bilstein.
     Retorna (front_shock, rear_shock).
+
     Reglas de Carlos:
+    - Si el Shock Type tiene "/" (ej: "6112/5100"), el primer numero es front y el segundo es rear
+      (caso comun en el archivo "ALL BILSTEIN .xlsx" donde el Shock Type ya viene combinado)
     - Si solo hay un shock (ej: 5100), es siempre el FRONT
-    - Si hay dos, el primero en el SKU es el front y el segundo el rear
-    - Si front y rear son iguales, se muestra una sola vez
+    - Si hay dos rows con Position=Front y Position=Rear, usa el Shock Type de cada uno
     """
     if not shock_col or shock_col not in vdf.columns:
         return ("", "")
+
+    # Caso 1: el Shock Type ya viene combinado con "/" (ej: "6112/5100")
+    # Todos los rows del grupo tienen el mismo Shock Type combinado
+    combined_shocks = vdf[shock_col].dropna().astype(str).unique()
+    if len(combined_shocks) >= 1 and any("/" in str(s) for s in combined_shocks):
+        # Tomar el primer shock que tenga "/"
+        for s in combined_shocks:
+            s_str = str(s).strip()
+            if "/" in s_str:
+                parts = s_str.split("/")
+                if len(parts) == 2:
+                    return (parts[0].strip(), parts[1].strip())
+
+    # Caso 2: el Shock Type viene separado por Position (Front/Rear)
     if not position_col or position_col not in vdf.columns:
         # Si no hay Position, asumir que el shock del primer row es el front
         return (clean_str(vdf.iloc[0].get(shock_col, "")), "")
-    
+
     front_rows = vdf[vdf[position_col].astype(str).str.strip().str.lower() == "front"]
     rear_rows = vdf[vdf[position_col].astype(str).str.strip().str.lower() == "rear"]
-    
+
     front_shock = clean_str(front_rows.iloc[0].get(shock_col, "")) if len(front_rows) > 0 else ""
     rear_shock = clean_str(rear_rows.iloc[0].get(shock_col, "")) if len(rear_rows) > 0 else ""
-    
+
     return (front_shock, rear_shock)
 
 
