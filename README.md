@@ -80,6 +80,9 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.11.3 (2026-07-17)
+- **Bug fix `position_col` en build_seo_gmc_only**: La funcion no recibia `position_col` como parametro, lo que causaba un NameError al generar titulos Bilstein en Tab 2. Se agrego el parametro a la firma y se pasa desde `app.py`.
+
 ### v1.11.2 (2026-07-17)
 - **Correccion 6112 Bilstein**: Segun Carlos, el shock 6112 NO es coilover. Se cambio el front tech de "Adjustable Coilover" a "Adjustable Shocks" (igual que el 5100). El rear queda vacio.
 

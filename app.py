@@ -2,9 +2,12 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.11.2"
+APP_VERSION = "1.11.3"
 
 CHANGELOG = """
+### v1.11.3 (2026-07-17)
+- **Bug fix `position_col` en build_seo_gmc_only**: La funcion no recibia `position_col` como parametro, lo que causaba un NameError al generar titulos Bilstein en Tab 2. Se agrego el parametro a la firma y se pasa desde `app.py`.
+
 ### v1.11.2 (2026-07-17)
 - **Correccion 6112 Bilstein**: Segun Carlos, el shock 6112 NO es coilover. Se cambio el front tech de "Adjustable Coilover" a "Adjustable Shocks" (igual que el 5100). El rear queda vacio.
 
@@ -576,7 +579,8 @@ with tab2:
                             drive_col=info_seo.get('drive_col'),
                             trim_col=info_seo.get('trim_col'),
                             type_col=info_seo.get('type_col'),
-                            id_col=info_seo.get('id_col')
+                            id_col=info_seo.get('id_col'),
+                            position_col=info_seo.get('position_col')
                         )
                         
                         st.success(f"✅ Generado exitosamente: {len(summary_seo)} productos")

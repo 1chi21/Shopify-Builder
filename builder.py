@@ -777,9 +777,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
     return output, summary, result_df
 
 
-def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None, 
+def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
                        engine_col=None, drive_col=None, trim_col=None, type_col=None,
-                       id_col=None):
+                       id_col=None, position_col=None):
     """
     Genera un archivo Excel con SOLO los metafields SEO Title y GMC Title
     para actualizar productos existentes en Shopify.
