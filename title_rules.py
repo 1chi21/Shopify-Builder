@@ -49,11 +49,12 @@ ASSEMBLY_TEXT = "w/ Strut Assembly"
 
 # Mapeo de shocks Bilstein a tecnologia Front/Rear
 # Segun archivo de referencia SEO_GMC Titles - BILSTEIN.xlsx
+# Confirmado por Carlos: el 6112 NO es coilover, es "Adjustable Shocks" (igual que 5100)
 # Usado para construir el GMC Title de productos Bilstein
 BILSTEIN_SHOCK_TECH = {
     "5100": {"front": "Adjustable Shocks", "rear": "Monotube Shocks"},
     "5160": {"front": "", "rear": "Remote Reservoir Shocks"},
-    "6112": {"front": "Adjustable Coilover", "rear": ""},
+    "6112": {"front": "Adjustable Shocks", "rear": ""},
     "8100": {"front": "", "rear": "Bypass Shocks / DSA Shocks"},
     "8112": {"front": "Zone Control Shocks / DSA Shocks", "rear": ""},
 }

@@ -2,9 +2,12 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.11.1"
+APP_VERSION = "1.11.2"
 
 CHANGELOG = """
+### v1.11.2 (2026-07-17)
+- **Correccion 6112 Bilstein**: Segun Carlos, el shock 6112 NO es coilover. Se cambio el front tech de "Adjustable Coilover" a "Adjustable Shocks" (igual que el 5100). El rear queda vacio.
+
 ### v1.11.1 (2026-07-17)
 - **Regla Gen para Bilstein**: Si el Gen tiene una generacion (ej: "5th Gen", "5thGen") se muestra en el titulo. Si no la tiene (es un año/rango como "14-18", "19-ON", "2010-2024") se omite para evitar duplicar con el year del final. Aplica tanto a SEO como a GMC.
 - **Regex de año mejorada en get_generation**: Ahora tambien matchea sufijos "-ON" (year onwards) en el Gen, no solo rangos numericos como "14-18" o "2010-2016".
