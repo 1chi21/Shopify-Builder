@@ -503,7 +503,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
     df = df[has_v].copy()
 
     df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
-    if shock_col and shock_col in df.columns:
+    # Para Bilstein, el shock es per-position (Front/Rear), NO se incluye en el agrupamiento
+    is_bilstein_group = df["Brand"].astype(str).str.strip().str.lower().eq("bilstein").all() if "Brand" in df.columns else False
+    if shock_col and shock_col in df.columns and not is_bilstein_group:
         df["_veh"] = df["_veh"] + "|" + df[shock_col].astype(str)
     if trim_col and trim_col in df.columns:
         # Solo agregar Trim si tiene valor (no vacío/NaN)
@@ -850,7 +852,9 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
     
     # Agrupar por vehículo + shock + trim
     df["_veh"] = df["Make"] + "|" + df["Model"] + "|" + df["Year"] + "|" + df["Brand"]
-    if shock_col and shock_col in df.columns:
+    # Para Bilstein, el shock es per-position (Front/Rear), NO se incluye en el agrupamiento
+    is_bilstein_group = df["Brand"].astype(str).str.strip().str.lower().eq("bilstein").all() if "Brand" in df.columns else False
+    if shock_col and shock_col in df.columns and not is_bilstein_group:
         df["_veh"] = df["_veh"] + "|" + df[shock_col].astype(str)
     if trim_col and trim_col in df.columns:
         # Solo agregar Trim si tiene valor (no vacío/NaN)

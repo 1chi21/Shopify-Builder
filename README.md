@@ -80,6 +80,11 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.11.5 (2026-07-17)
+- **Bug fix agrupamiento Bilstein**: El `_veh` (llave de agrupamiento) ya NO incluye el `Shock Type` cuando la marca es Bilstein. Esto es porque para Bilstein el shock es per-position (Front/Rear), no por producto. Si se incluía, los rows con Front=6112 y Rear=5100 quedaban en grupos separados y `get_bilstein_shocks` no encontraba ambos shocks.
+- **Fix en `build_seo_gmc_only` y `build_matrixify_excel`**: Ambos lugares verifican si todos los rows son Bilstein y excluyen el shock del agrupamiento en ese caso.
+- **Aislamiento**: Productos OME siguen agrupando por shock (ej: BP-51 vs Nitro son productos diferentes). Solo Bilstein se ve afectado.
+
 ### v1.11.4 (2026-07-17)
 - **Bug fix "Lift Kits" plural en Bilstein**: Las funciones `build_bilstein_seo_title` y `build_bilstein_gmc_title` ahora siempre normalizan el `internal_type` usando `determine_kit_type()`. Esto convierte "Lift Kits" -> "Lift Kit" y "Leveling Kits" -> "Leveling Kit" (siempre singular).
 
