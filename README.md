@@ -80,6 +80,9 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.11.4 (2026-07-17)
+- **Bug fix "Lift Kits" plural en Bilstein**: Las funciones `build_bilstein_seo_title` y `build_bilstein_gmc_title` ahora siempre normalizan el `internal_type` usando `determine_kit_type()`. Esto convierte "Lift Kits" -> "Lift Kit" y "Leveling Kits" -> "Leveling Kit" (siempre singular).
+
 ### v1.11.3 (2026-07-17)
 - **Bug fix `position_col` en build_seo_gmc_only**: La funcion no recibia `position_col` como parametro, lo que causaba un NameError al generar titulos Bilstein en Tab 2. Se agrego el parametro a la firma y se pasa desde `app.py`.
 

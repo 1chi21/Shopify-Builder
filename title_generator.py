@@ -520,13 +520,15 @@ def build_bilstein_seo_title(vdf, model, year, gen, height, internal_type,
     No se aplica LC100 (Land Cruiser), Non Rubicon, ni multi-modelo.
     """
     shocks_str = format_bilstein_shocks(front_shock, rear_shock)
-    
-    # Usar internal_type si esta disponible, sino determine_kit_type
-    if internal_type:
-        kit_type = internal_type
-    else:
-        kit_type = determine_kit_type(vdf_for_product=vdf, type_col=type_col)
-    
+
+    # Siempre normalizar el internal_type para evitar plurales como "Lift Kits"
+    # determine_kit_type convierte "Lift Kits" -> "Lift Kit" y "Leveling Kits" -> "Leveling Kit"
+    kit_type = determine_kit_type(
+        internal_type_value=internal_type if internal_type else None,
+        vdf_for_product=vdf,
+        type_col=type_col
+    )
+
     # Formatear height: siempre agregar " al final (el input de Bilstein no trae " inch")
     if height:
         h = height.replace(" inch", "").strip()
@@ -559,12 +561,14 @@ def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
     Limite: 150 chars (mismo que OME) con fallback progresivo.
     """
     shocks_str = format_bilstein_shocks(front_shock, rear_shock)
-    
-    if internal_type:
-        kit_type = internal_type
-    else:
-        kit_type = determine_kit_type(vdf_for_product=vdf, type_col=type_col)
-    
+
+    # Siempre normalizar el internal_type
+    kit_type = determine_kit_type(
+        internal_type_value=internal_type if internal_type else None,
+        vdf_for_product=vdf,
+        type_col=type_col
+    )
+
     # Formatear height: siempre agregar " al final
     if height:
         h = height.replace(" inch", "").strip()
