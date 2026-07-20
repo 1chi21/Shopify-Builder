@@ -2,9 +2,17 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.11.6"
+APP_VERSION = "1.11.7"
 
 CHANGELOG = """
+### v1.11.7 (2026-07-20)
+- **Secondary Shock Type para Bilstein**: Nueva columna detectada automaticamente. Formato esperado: `CR/BYP`, `DSA/5160`, etc. (primera parte = marca CR/DSA, segunda parte = tech). Se usa en `get_bilstein_shock_tech` para mostrar SOLO la tecnologia especifica (no "Bypass / DSA" sino la que corresponde: "Bypass" o "DSA").
+- **Mapeo de tech_code a tech string**: 5160=Remote Reservoir, BYP=Bypass, DSA=DSA Shocks, REG=Regular (placeholder).
+- **Fallback progresivo GMC 150 chars (regla Carlos)**: Cuando el titulo excede 150 chars, se borra PRIMERO el rear shock tech. Si sigue siendo muy largo, se borra tambien el front. Si AUN excede, se marca con `[EXCEDE 150 CHARS]`.
+- **Nueva funcion `_parse_bilstein_secondary`**: Parsea el Secondary Shock Type y devuelve la tecnologia especifica segun el shock.
+- **Cambios en `analyze_input`**: Detecta automaticamente la columna "Secondary Shock Type" (candidatos: "Secondary Shock Type", "SecondaryShockType", "secondary_shock_type", "Sec Shock Type").
+- **Cambios en `build_matrixify_excel` y `build_seo_gmc_only`**: Aceptan y pasan el parametro `secondary_shock_type_col` a `build_bilstein_gmc_title`.
+
 ### v1.11.6 (2026-07-20)
 - **Bug fix Shock Type combinado Bilstein**: El archivo "ALL BILSTEIN .xlsx" tiene el `Shock Type` con valores combinados como `"6112/5100"`, `"8112/5160"` (front/rear en una sola celda). La funcion `get_bilstein_shocks` ahora detecta esto y parsea directamente: primer numero = front, segundo = rear. Antes buscaba por Position y encontraba el mismo valor combinado para ambos, devolviendo el shock incorrecto.
 
@@ -590,6 +598,7 @@ with tab2:
                             drive_col=info_seo.get('drive_col'),
                             trim_col=info_seo.get('trim_col'),
                             type_col=info_seo.get('type_col'),
+                            secondary_shock_type_col=info_seo.get('secondary_shock_type_col'),
                             id_col=info_seo.get('id_col'),
                             position_col=info_seo.get('position_col')
                         )

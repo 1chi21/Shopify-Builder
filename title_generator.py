@@ -490,15 +490,61 @@ def format_bilstein_shocks(front_shock, rear_shock):
     return f"{front_shock}/{rear_shock}"
 
 
-def get_bilstein_shock_tech(front_shock, rear_shock):
+def get_bilstein_shock_tech(front_shock, rear_shock, front_secondary=None, rear_secondary=None):
     """
     Obtiene las tecnologias front y rear de un shock Bilstein.
     Retorna (front_tech, rear_tech).
-    Usa el mapeo BILSTEIN_SHOCK_TECH de title_rules.py.
+
+    Si se proporciona el Secondary Shock Type (ej: "CR/BYP", "DSA/5160"),
+    se usa para determinar la tecnologia ESPECIFICA (no la combinada "Tech1 / Tech2").
+    Formato del Secondary Shock Type: [CR_o_DSA]/[tech_code]
+      - CR = Bilstein B8, DSA = DSA
+      - tech_code: 5160=Remote Reservoir, BYP=Bypass, DSA=DSA, REG=Regular
     """
-    front_tech = BILSTEIN_SHOCK_TECH.get(str(front_shock).strip(), {}).get("front", "")
-    rear_tech = BILSTEIN_SHOCK_TECH.get(str(rear_shock).strip(), {}).get("rear", "")
+    if front_secondary:
+        front_tech = _parse_bilstein_secondary(front_shock, front_secondary, "front")
+    else:
+        front_tech = BILSTEIN_SHOCK_TECH.get(str(front_shock).strip(), {}).get("front", "")
+
+    if rear_secondary:
+        rear_tech = _parse_bilstein_secondary(rear_shock, rear_secondary, "rear")
+    else:
+        rear_tech = BILSTEIN_SHOCK_TECH.get(str(rear_shock).strip(), {}).get("rear", "")
+
     return (front_tech, rear_tech)
+
+
+def _parse_bilstein_secondary(shock, secondary, position):
+    """
+    Parsea el Secondary Shock Type para obtener la tecnologia especifica.
+    secondary: e.g., "CR/BYP", "DSA/5160"
+    position: "front" o "rear"
+
+    Regla Carlos: NO mostrar "Tech1 / Tech2", solo el que corresponde.
+    Mapeo de tech_code a tech string:
+      - 5160 -> "Remote Reservoir Shocks"
+      - BYP  -> "Bypass Shocks"
+      - DSA  -> "DSA Shocks"
+      - REG  -> "Regular Shocks" (placeholder, Carlos confirmara)
+    """
+    if not secondary or "/" not in secondary:
+        # Fallback al mapping original (BILSTEIN_SHOCK_TECH)
+        return BILSTEIN_SHOCK_TECH.get(str(shock).strip(), {}).get(position, "")
+
+    parts = secondary.split("/")
+    if len(parts) != 2:
+        return BILSTEIN_SHOCK_TECH.get(str(shock).strip(), {}).get(position, "")
+
+    tech_code = parts[1].strip()
+
+    tech_map = {
+        "5160": "Remote Reservoir Shocks",
+        "BYP":  "Bypass Shocks",
+        "DSA":  "DSA Shocks",
+        "REG":  "Regular Shocks",  # Placeholder
+    }
+
+    return tech_map.get(tech_code, BILSTEIN_SHOCK_TECH.get(str(shock).strip(), {}).get(position, ""))
 
 
 def get_generation_bilstein(gen_value):
@@ -568,13 +614,17 @@ def build_bilstein_seo_title(vdf, model, year, gen, height, internal_type,
 
 
 def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
-                             front_shock, rear_shock, type_col=None):
+                             front_shock, rear_shock, type_col=None,
+                             secondary_shock_type_col=None, position_col=None):
     """
     Construye el GMC Title para productos Bilstein.
     Formato: Bilstein {shocks} {model} {gen} {internal_type} {height} ({year}) {front_tech}, {rear_tech}
     Sin "Suspension Upgrade" (diferente de OME).
     El front tech lleva prefijo "Front", el rear tech no lleva prefijo.
-    Limite: 150 chars (mismo que OME) con fallback progresivo.
+    Si se pasa secondary_shock_type_col, se extrae el Secondary Shock Type del vdf
+    (formato: "CR/BYP", "DSA/5160") y se usa para mostrar SOLO la tech especifica
+    (no "Bypass / DSA" sino la que corresponde).
+    Limite: 150 chars con fallback progresivo: primero rear, luego front, luego [EXCEDE].
     """
     shocks_str = format_bilstein_shocks(front_shock, rear_shock)
 
@@ -602,27 +652,56 @@ def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
         parts.insert(-2, ASSEMBLY_TEXT)
     parts = [p for p in parts if p]
     title_base = " ".join(parts)
-    
+
+    # Extraer Secondary Shock Type del vdf (si la columna existe)
+    front_secondary = ""
+    rear_secondary = ""
+    if secondary_shock_type_col and secondary_shock_type_col in vdf.columns:
+        # Detectar columna de Position
+        pos_col = position_col
+        if not pos_col or pos_col not in vdf.columns:
+            for col in ["Position", "position", "Pos", "pos"]:
+                if col in vdf.columns:
+                    pos_col = col
+                    break
+        if pos_col and pos_col in vdf.columns:
+            front_rows = vdf[vdf[pos_col].astype(str).str.strip().str.lower() == "front"]
+            rear_rows = vdf[vdf[pos_col].astype(str).str.strip().str.lower() == "rear"]
+            if len(front_rows) > 0:
+                front_secondary = clean_str(front_rows.iloc[0].get(secondary_shock_type_col, ""))
+            if len(rear_rows) > 0:
+                rear_secondary = clean_str(rear_rows.iloc[0].get(secondary_shock_type_col, ""))
+
     # Tech part (con prefijo "Front" solo en el front)
-    front_tech, rear_tech = get_bilstein_shock_tech(front_shock, rear_shock)
-    
-    tech_parts = []
-    if front_tech:
-        tech_parts.append(f"Front {front_tech}")
-    if rear_tech:
-        tech_parts.append(rear_tech)
-    
-    if tech_parts:
-        gmc_title = f"{title_base}, {', '.join(tech_parts)}"
-    else:
-        gmc_title = title_base
-    
-    # Limite de caracteres (mismo que OME: 150)
+    front_tech, rear_tech = get_bilstein_shock_tech(
+        front_shock, rear_shock, front_secondary, rear_secondary
+    )
+
+    # Helper para construir titulo con/sin front/rear tech
+    def build_with_tech(include_front, include_rear):
+        tech_parts = []
+        if include_front and front_tech:
+            tech_parts.append(f"Front {front_tech}")
+        if include_rear and rear_tech:
+            tech_parts.append(rear_tech)
+        if tech_parts:
+            return f"{title_base}, {', '.join(tech_parts)}"
+        return title_base
+
+    # Intentar con ambos
+    gmc_title = build_with_tech(True, True)
+
+    # Limite de caracteres (mismo que OME: 150) con fallback progresivo
     if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
-        # Fallback: quitar tech descriptions
-        gmc_title = title_base
+        # Regla Carlos: borrar primero el rear shock
+        gmc_title = build_with_tech(True, False)
         if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
-            gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
-    
-    return gmc_title
+            # Si sigue siendo muy largo, borrar el front shock tambien
+            gmc_title = build_with_tech(False, True)
+            if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
+                # Si AUN es muy largo, marcar con [EXCEDE]
+                gmc_title = title_base
+                if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
+                    gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
+
     return gmc_title

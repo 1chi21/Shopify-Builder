@@ -281,8 +281,9 @@ def analyze_input(df):
         "color_col": None,
         "part_sku_col": None,
         "position_col": None,
-        "type_col": None,
-        "id_col": None,
+    "type_col": None,
+    "secondary_shock_type_col": None,
+    "id_col": None,
         "qty_col": None,
         "gen_col": None,
         "engine_col": None,
@@ -316,6 +317,10 @@ def analyze_input(df):
 
     type_col = _find_column(df, TYPE_COL_CANDIDATES)
     info["type_col"] = type_col
+
+    # Detectar columna Secondary Shock Type (especifica la tech para Bilstein)
+    secondary_candidates = ["Secondary Shock Type", "SecondaryShockType", "secondary_shock_type", "Sec Shock Type"]
+    info["secondary_shock_type_col"] = _find_column(df, secondary_candidates)
 
     # Detectar columnas para SEO/GMC titles
     if "Gen" in df.columns:
@@ -426,7 +431,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                           product_type="Lift Kits", lift_col=None, shock_col=None,
                           pin_position_col=None, rear_lift_col=None, color_col=None,
                           part_sku_col=None, position_col=None, type_col=None,
-                          qty_col=None, gen_col=None, engine_col=None, 
+                          secondary_shock_type_col=None,
+                          qty_col=None, gen_col=None, engine_col=None,
                           drive_col=None, trim_col=None, option_value_overrides=None):
     if qty_col is None:
         if "Qty Customer" in df.columns and df["Qty Customer"].notna().any():
@@ -459,6 +465,11 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
     if type_col is None:
         type_col = _find_column(df, TYPE_COL_CANDIDATES)
+
+    # Detectar Secondary Shock Type si no se proporciono
+    if secondary_shock_type_col is None:
+        secondary_candidates = ["Secondary Shock Type", "SecondaryShockType", "secondary_shock_type", "Sec Shock Type"]
+        secondary_shock_type_col = _find_column(df, secondary_candidates)
 
     # Detectar columnas para SEO/GMC titles si no se proporcionan
     if gen_col is None and "Gen" in df.columns:
@@ -682,7 +693,9 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                 front_shock, rear_shock = get_bilstein_shocks(sku_rows, shock_col, position_col)
                 gmc_title = build_bilstein_gmc_title(
                     sku_rows, model, year, gen_val_var, lift_val.replace(" inches", ""),
-                    internal_type_var, front_shock, rear_shock, type_col
+                    internal_type_var, front_shock, rear_shock, type_col,
+                    secondary_shock_type_col=secondary_shock_type_col,
+                    position_col=position_col
                 )
             else:
                 # Reglas OME (existentes)
@@ -781,6 +794,7 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 
 def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
                        engine_col=None, drive_col=None, trim_col=None, type_col=None,
+                       secondary_shock_type_col=None,
                        id_col=None, position_col=None):
     """
     Genera un archivo Excel con SOLO los metafields SEO Title y GMC Title
@@ -806,6 +820,10 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         trim_col = "Trim"
     if type_col is None:
         type_col = _find_column(df, TYPE_COL_CANDIDATES)
+    # Detectar Secondary Shock Type si no se proporciono
+    if secondary_shock_type_col is None:
+        secondary_candidates = ["Secondary Shock Type", "SecondaryShockType", "secondary_shock_type", "Sec Shock Type"]
+        secondary_shock_type_col = _find_column(df, secondary_candidates)
     if id_col is None and "ID" in df.columns:
         id_col = "ID"
     
@@ -981,7 +999,9 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
                 front_shock_gmc, rear_shock_gmc = get_bilstein_shocks(sku_rows, shock_col, position_col)
                 gmc_title = build_bilstein_gmc_title(
                     sku_rows, model, year, gen_val_var, lift_range,
-                    internal_type_var, front_shock_gmc, rear_shock_gmc, type_col
+                    internal_type_var, front_shock_gmc, rear_shock_gmc, type_col,
+                    secondary_shock_type_col=secondary_shock_type_col,
+                    position_col=position_col
                 )
             else:
                 # Reglas OME (existentes)
