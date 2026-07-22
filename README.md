@@ -80,6 +80,23 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.11.8 (2026-07-20)
+- **Nombres completos de tech Bilstein** (regla Carlos):
+  - 5160: "Remote Reservoir Shocks"
+  - 6112: "Adjustable Shocks" (igual que 5100 front)
+  - 8112 + 5160: "Zone Control CR Shocks"
+  - 8112 + DSA+: "Zone Control CR DSA+ Shocks"
+  - 8100 + BYP: "Bypass Shocks"
+  - 8100 + SB/REG: "Smooth Body Shocks"
+  - 8100 + SB+/DSA+: "Smooth Body DSA+ Shocks"
+- **"Rear" keyword**: El rear tech ahora lleva prefijo "Rear" (antes no llevaba).
+- **"&" separator**: Front y rear tech ahora se separan con "&" (antes era ",").
+- **Fallback progresivo 150 chars (regla Carlos)**:
+  - Para 5100: eliminar el Rear completo
+  - Para 6112/5160: eliminar la keyword "Shocks" del Rear
+  - Para 8112/8100 (DSA+): primero eliminar "Smooth Body" del Rear, luego "Zone Control CR" del Front, luego solo "CR"
+  - Si ninguna transformacion entra: marcar con [EXCEDE 150 CHARS]
+
 ### v1.11.7 (2026-07-20)
 - **Secondary Shock Type para Bilstein**: Nueva columna detectada automaticamente. Formato esperado: `CR/BYP`, `DSA/5160`, etc. (primera parte = marca CR/DSA, segunda parte = tech). Se usa en `get_bilstein_shock_tech` para mostrar SOLO la tecnologia especifica (no "Bypass / DSA" sino la que corresponde: "Bypass" o "DSA").
 - **Mapeo de tech_code a tech string**: 5160=Remote Reservoir, BYP=Bypass, DSA=DSA Shocks, REG=Regular (placeholder).

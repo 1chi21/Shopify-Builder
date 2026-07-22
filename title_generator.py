@@ -516,16 +516,20 @@ def get_bilstein_shock_tech(front_shock, rear_shock, front_secondary=None, rear_
 
 def _parse_bilstein_secondary(shock, secondary, position):
     """
-    Parsea el Secondary Shock Type para obtener la tecnologia especifica.
-    secondary: e.g., "CR/BYP", "DSA/5160"
+    Parsea el Secondary Shock Type para obtener la tecnologia especifica con nombres completos.
+    secondary: e.g., "CR/5160", "CR/BYP", "CR/SB", "CR/SB+", "DSA/5160"
     position: "front" o "rear"
 
-    Regla Carlos: NO mostrar "Tech1 / Tech2", solo el que corresponde.
-    Mapeo de tech_code a tech string:
-      - 5160 -> "Remote Reservoir Shocks"
-      - BYP  -> "Bypass Shocks"
-      - DSA  -> "DSA Shocks"
-      - REG  -> "Regular Shocks" (placeholder, Carlos confirmara)
+    Regla Carlos: NO mostrar "Tech1 / Tech2", solo el nombre completo que corresponde.
+
+    Mapeo por shock:
+      - 5160: 5160 -> "Remote Reservoir Shocks"
+      - 6112: 5160 -> "Adjustable Shocks" (igual que 5100 front)
+      - 8112: 5160 -> "Zone Control CR Shocks"
+              DSA+  -> "Zone Control CR DSA+ Shocks"
+      - 8100: BYP  -> "Bypass Shocks"
+              DSA+ -> "Smooth Body DSA+ Shocks"
+              SB/REG -> "Smooth Body Shocks"
     """
     if not secondary or "/" not in secondary:
         # Fallback al mapping original (BILSTEIN_SHOCK_TECH)
@@ -535,16 +539,35 @@ def _parse_bilstein_secondary(shock, secondary, position):
     if len(parts) != 2:
         return BILSTEIN_SHOCK_TECH.get(str(shock).strip(), {}).get(position, "")
 
-    tech_code = parts[1].strip()
+    tech_code = parts[1].strip().upper()
+    shock_clean = str(shock).strip()
 
-    tech_map = {
-        "5160": "Remote Reservoir Shocks",
-        "BYP":  "Bypass Shocks",
-        "DSA":  "DSA Shocks",
-        "REG":  "Regular Shocks",  # Placeholder
-    }
+    # Mapeo actualizado con nombres completos (regla Carlos v1.11.8)
+    if shock_clean == "5160":
+        # 5160: Remote Reservoir Shocks
+        if tech_code == "5160":
+            return "Remote Reservoir Shocks"
+    elif shock_clean == "6112":
+        # 6112: Adjustable Shocks (igual que 5100 front)
+        if tech_code == "5160":
+            return "Adjustable Shocks"
+    elif shock_clean == "8112":
+        # 8112: Zone Control CR Shocks o Zone Control CR DSA+ Shocks
+        if tech_code == "5160":
+            return "Zone Control CR Shocks"
+        elif "DSA" in tech_code:
+            return "Zone Control CR DSA+ Shocks"
+    elif shock_clean == "8100":
+        # 8100: Smooth Body Shocks, Smooth Body DSA+ Shocks, o Bypass Shocks
+        if tech_code == "BYP":
+            return "Bypass Shocks"
+        elif "DSA" in tech_code or "+" in tech_code:  # SB+ o DSA → DSA+ version
+            return "Smooth Body DSA+ Shocks"
+        else:  # SB, REG, o cualquier otro
+            return "Smooth Body Shocks"
 
-    return tech_map.get(tech_code, BILSTEIN_SHOCK_TECH.get(str(shock).strip(), {}).get(position, ""))
+    # Fallback al mapping original
+    return BILSTEIN_SHOCK_TECH.get(shock_clean, {}).get(position, "")
 
 
 def get_generation_bilstein(gen_value):
@@ -678,30 +701,59 @@ def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
     )
 
     # Helper para construir titulo con/sin front/rear tech
-    def build_with_tech(include_front, include_rear):
+    # Regla Carlos v1.11.8:
+    # - Front tech lleva prefijo "Front"
+    # - Rear tech lleva prefijo "Rear"
+    # - Front y rear se separan con "&" (no ",")
+    def build_with_tech(f_tech, r_tech):
         tech_parts = []
-        if include_front and front_tech:
-            tech_parts.append(f"Front {front_tech}")
-        if include_rear and rear_tech:
-            tech_parts.append(rear_tech)
+        if f_tech:
+            tech_parts.append(f"Front {f_tech}")
+        if r_tech:
+            tech_parts.append(f"Rear {r_tech}")
         if tech_parts:
-            return f"{title_base}, {', '.join(tech_parts)}"
+            return f"{title_base} & {' & '.join(tech_parts)}"
         return title_base
 
-    # Intentar con ambos
-    gmc_title = build_with_tech(True, True)
+    # Generar lista de transformaciones (fallback progresivo segun shock)
+    def get_transformations(f_tech, r_tech):
+        transforms = [(f_tech, r_tech)]  # Original
 
-    # Limite de caracteres (mismo que OME: 150) con fallback progresivo
-    if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
-        # Regla Carlos: borrar primero el rear shock
-        gmc_title = build_with_tech(True, False)
+        if str(front_shock) == "5100":
+            # Para 5100: eliminar el Rear completo
+            transforms.append((f_tech, ""))
+        elif str(front_shock) in ("6112", "5160") or str(rear_shock) in ("6112", "5160"):
+            # Para 6112/5160: eliminar la keyword "Shocks" del Rear
+            if "Shocks" in r_tech:
+                transforms.append((f_tech, r_tech.replace("Shocks", "").strip()))
+        elif str(front_shock) in ("8112", "8100") or str(rear_shock) in ("8112", "8100"):
+            # Para DSA+ (8112 y 8100)
+            # 1) Eliminar "Smooth Body" del Rear
+            if "Smooth Body" in r_tech:
+                transforms.append((f_tech, r_tech.replace("Smooth Body", "").strip()))
+            # 2) Si no alcanza, eliminar "Zone Control CR" del Front
+            if "Zone Control CR" in f_tech:
+                transforms.append((f_tech.replace("Zone Control CR", "CR").strip(), r_tech))
+                transforms.append((f_tech.replace("Zone Control CR", "CR").strip(), r_tech.replace("Smooth Body", "").strip() if "Smooth Body" in r_tech else r_tech))
+            # 3) Si el exceso es poco, solo quitar "CR"
+            if "CR" in f_tech and "Zone Control CR" not in f_tech:
+                transforms.append((f_tech.replace("CR", "").strip(), r_tech))
+
+        return transforms
+
+    # Probar todas las transformaciones
+    transforms = get_transformations(front_tech, rear_tech)
+    gmc_title = None
+    for f_tech, r_tech in transforms:
+        candidate = build_with_tech(f_tech, r_tech)
+        if len(candidate) <= GMC_TITLE_MAX_LENGTH:
+            gmc_title = candidate
+            break
+
+    # Si ninguna transformacion entra, marcar con [EXCEDE]
+    if gmc_title is None:
+        gmc_title = title_base
         if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
-            # Si sigue siendo muy largo, borrar el front shock tambien
-            gmc_title = build_with_tech(False, True)
-            if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
-                # Si AUN es muy largo, marcar con [EXCEDE]
-                gmc_title = title_base
-                if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
-                    gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
+            gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
 
     return gmc_title
