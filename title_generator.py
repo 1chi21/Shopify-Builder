@@ -552,11 +552,13 @@ def _parse_bilstein_secondary(shock, secondary, position):
         if tech_code == "5160":
             return "Adjustable Shocks"
     elif shock_clean == "8112":
-        # 8112: Zone Control CR Shocks o Zone Control CR DSA+ Shocks
-        if tech_code == "5160":
-            return "Zone Control CR Shocks"
-        elif "DSA" in tech_code:
+        # 8112:
+        # - Si es DSA+: "Zone Control CR DSA+ Shocks" (con CR)
+        # - Si NO es DSA+ (ej: 5160, BYP, REG): "Zone Control Shocks" (SIN CR)
+        if "DSA" in tech_code or "+" in tech_code:
             return "Zone Control CR DSA+ Shocks"
+        else:
+            return "Zone Control Shocks"
     elif shock_clean == "8100":
         # 8100: Smooth Body Shocks, Smooth Body DSA+ Shocks, o Bypass Shocks
         if tech_code == "BYP":
@@ -701,10 +703,11 @@ def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
     )
 
     # Helper para construir titulo con/sin front/rear tech
-    # Regla Carlos v1.11.8:
+    # Regla Carlos v1.11.8 (corregido v1.11.9):
     # - Front tech lleva prefijo "Front"
     # - Rear tech lleva prefijo "Rear"
-    # - Front y rear se separan con "&" (no ",")
+    # - Entre base y tech: COMA ","
+    # - Entre front y rear: AMPERSAND "&"
     def build_with_tech(f_tech, r_tech):
         tech_parts = []
         if f_tech:
@@ -712,7 +715,7 @@ def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
         if r_tech:
             tech_parts.append(f"Rear {r_tech}")
         if tech_parts:
-            return f"{title_base} & {' & '.join(tech_parts)}"
+            return f"{title_base}, {' & '.join(tech_parts)}"
         return title_base
 
     # Generar lista de transformaciones (fallback progresivo segun shock)

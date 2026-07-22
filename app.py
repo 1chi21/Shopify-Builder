@@ -2,9 +2,14 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.11.8"
+APP_VERSION = "1.11.9"
 
 CHANGELOG = """
+### v1.11.9 (2026-07-20)
+- **Correccion separator**: Cambiado "&" por "," entre la base del titulo y la parte de tech. El "&" se mantiene SOLO entre front y rear tech (regla Carlos: coma entre base y tech, ampersand entre front y rear).
+- **8112 sin "CR" cuando NO es DSA+**: Para shock 8112, si el secondary NO es DSA+ (ej: "CR/5160", "CR/BYP", "CR/REG") el tech es "Zone Control Shocks" (sin "CR"). Si ES DSA+ (ej: "CR/DSA+") el tech es "Zone Control CR DSA+ Shocks" (con "CR").
+- **Shock sets y Strut Assembly**: Se mantienen los shock sets (front/rear) en el titulo. Los titulos con Strut Assembly pueden quedar largos y usan el fallback progresivo.
+
 ### v1.11.8 (2026-07-20)
 - **Nombres completos de tech Bilstein** (regla Carlos):
   - 5160: "Remote Reservoir Shocks"
