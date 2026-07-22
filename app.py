@@ -2,9 +2,12 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.11.9"
+APP_VERSION = "1.11.10"
 
 CHANGELOG = """
+### v1.11.10 (2026-07-20)
+- **VERSION CHECK en build_bilstein_gmc_title**: Se agrego un print de verificacion al inicio de la funcion. Si el deploy se hizo correctamente, este mensaje aparecera en los logs de Streamlit Cloud cada vez que se genere un GMC de Bilstein. Permite diagnosticar si el codigo nuevo esta corriendo o no.
+
 ### v1.11.9 (2026-07-20)
 - **Correccion separator**: Cambiado "&" por "," entre la base del titulo y la parte de tech. El "&" se mantiene SOLO entre front y rear tech (regla Carlos: coma entre base y tech, ampersand entre front y rear).
 - **8112 sin "CR" cuando NO es DSA+**: Para shock 8112, si el secondary NO es DSA+ (ej: "CR/5160", "CR/BYP", "CR/REG") el tech es "Zone Control Shocks" (sin "CR"). Si ES DSA+ (ej: "CR/DSA+") el tech es "Zone Control CR DSA+ Shocks" (con "CR").

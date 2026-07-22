@@ -648,9 +648,20 @@ def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
     El front tech lleva prefijo "Front", el rear tech no lleva prefijo.
     Si se pasa secondary_shock_type_col, se extrae el Secondary Shock Type del vdf
     (formato: "CR/BYP", "DSA/5160") y se usa para mostrar SOLO la tech especifica
-    (no "Bypass / DSA" sino la que corresponde).
+    (no "Bypass / DSA" sino la que corresponde: "Bypass" o "DSA").
     Limite: 150 chars con fallback progresivo: primero rear, luego front, luego [EXCEDE].
     """
+    # ============================================================
+    # VERSION CHECK v1.11.10 - Si ves este mensaje en los logs
+    # de Streamlit Cloud, el codigo nuevo ESTA corriendo
+    # ============================================================
+    print("=" * 60)
+    print("[BILSTEIN VERSION CHECK] v1.11.10 - CODIGO NUEVO CORRIENDO")
+    print("[BILSTEIN VERSION CHECK] Si ves esto en los logs, el deploy se hizo OK")
+    print(f"[BILSTEIN VERSION CHECK] model={model}, gen={gen}, front_shock={front_shock}, rear_shock={rear_shock}")
+    print("=" * 60)
+    # ============================================================
+
     shocks_str = format_bilstein_shocks(front_shock, rear_shock)
 
     # Siempre normalizar el internal_type
