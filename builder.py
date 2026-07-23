@@ -805,7 +805,7 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
                        engine_col=None, drive_col=None, trim_col=None, type_col=None,
                        secondary_shock_type_col=None,
                        id_col=None, position_col=None,
-                       disable_gmc_limit=False):
+                       disable_gmc_limit=False):  # v1.11.13: parametro para checkbox "Sin limite"
     """
     Genera un archivo Excel con SOLO los metafields SEO Title y GMC Title
     para actualizar productos existentes en Shopify.

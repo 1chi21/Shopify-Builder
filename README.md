@@ -80,6 +80,10 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.11.14 (2026-07-20)
+- **Bug fix deploy v1.11.13**: El parametro `disable_gmc_limit` se agrego en v1.11.13 pero el deploy no detecto el cambio. Se hace un cambio visible en `builder.py` para forzar el redeploy.
+- **Checkbox "Sin limite" en Tab 2**: (sin cambios desde v1.11.13) Cuando esta marcado desactiva el limite de 150 chars en el GMC de Bilstein.
+
 ### v1.11.13 (2026-07-20)
 - **Checkbox "Sin limite" en Tab 2**: Nuevo checkbox en Tab 2 ("SEO & GMC Titles") que cuando esta marcado desactiva el limite de 150 chars en el GMC de Bilstein. Permite comparar el titulo con y sin limite para ver que se cortaria. Carlos pidio esta opcion para hacer una comparacion antes de aprobar.
 - **Parametro `disable_gmc_limit` en build_seo_gmc_only**: Nuevo parametro opcional (default False) que se pasa a `build_bilstein_gmc_title` como `disable_limit`. Si el checkbox esta marcado, el parametro es True y el titulo GMC no se limita a 150 chars.
