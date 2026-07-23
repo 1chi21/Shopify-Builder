@@ -80,6 +80,12 @@ streamlit run app.py
 
 ## Changelog
 
+### v1.11.11 (2026-07-20)
+- **"Shocks Set" como kit_type**: `determine_kit_type` ahora detecta "shocks set" (case-insensitive) y retorna "Shocks Set Kit" (antes retornaba "Lift Kit").
+- **8112 SIEMPRE con "CR"**: Se revirtio el cambio de v1.11.9. Para shock 8112, el tech ahora es "Zone Control CR Shocks" (con "CR") para no-DSA+, y "Zone Control CR DSA+ Shocks" para DSA+. Carlos confirmo que "CR" es parte del "Zone Control" y va junto siempre.
+- **Drive, Trim, Engine en titulos Bilstein**: Se agregaron los parametros engine, drive, trim a `build_bilstein_seo_title` y `build_bilstein_gmc_title`. Ahora se incluyen en los titulos (entre model y gen) cuando existen en el input. Se filtra Non Rubicon para el trim (igual que OME).
+- **Call sites actualizados en builder.py**: Los 3 call sites de `build_bilstein_seo_title` y los 2 de `build_bilstein_gmc_title` ahora pasan engine, drive, trim desde el input.
+
 ### v1.11.10 (2026-07-20)
 - **VERSION CHECK en build_bilstein_gmc_title**: Se agrego un print de verificacion al inicio de la funcion. Si el deploy se hizo correctamente, este mensaje aparecera en los logs de Streamlit Cloud cada vez que se genere un GMC de Bilstein. Permite diagnosticar si el codigo nuevo esta corriendo o no.
 

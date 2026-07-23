@@ -2,13 +2,16 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.11.10"
+APP_VERSION = "1.11.11"
 
 CHANGELOG = """
-### v1.11.10 (2026-07-20)
-- **VERSION CHECK en build_bilstein_gmc_title**: Se agrego un print de verificacion al inicio de la funcion. Si el deploy se hizo correctamente, este mensaje aparecera en los logs de Streamlit Cloud cada vez que se genere un GMC de Bilstein. Permite diagnosticar si el codigo nuevo esta corriendo o no.
+### v1.11.11 (2026-07-20)
+- **"Shocks Set" como kit_type**: `determine_kit_type` ahora detecta "shocks set" (case-insensitive) y retorna "Shocks Set Kit" (antes retornaba "Lift Kit").
+- **8112 SIEMPRE con "CR"**: Se revirtio el cambio de v1.11.9. Para shock 8112, el tech ahora es "Zone Control CR Shocks" (con "CR") para no-DSA+, y "Zone Control CR DSA+ Shocks" para DSA+. Carlos confirmo que "CR" es parte del "Zone Control" y va junto siempre.
+- **Drive, Trim, Engine en titulos Bilstein**: Se agregaron los parametros engine, drive, trim a `build_bilstein_seo_title` y `build_bilstein_gmc_title`. Ahora se incluyen en los titulos (entre model y gen) cuando existen en el input. Se filtra Non Rubicon para el trim (igual que OME).
+- **Call sites actualizados en builder.py**: Los 3 call sites de `build_bilstein_seo_title` y los 2 de `build_bilstein_gmc_title` ahora pasan engine, drive, trim desde el input.
 
-### v1.11.9 (2026-07-20)
+### v1.11.10 (2026-07-20)
 - **Correccion separator**: Cambiado "&" por "," entre la base del titulo y la parte de tech. El "&" se mantiene SOLO entre front y rear tech (regla Carlos: coma entre base y tech, ampersand entre front y rear).
 - **8112 sin "CR" cuando NO es DSA+**: Para shock 8112, si el secondary NO es DSA+ (ej: "CR/5160", "CR/BYP", "CR/REG") el tech es "Zone Control Shocks" (sin "CR"). Si ES DSA+ (ej: "CR/DSA+") el tech es "Zone Control CR DSA+ Shocks" (con "CR").
 - **Shock sets y Strut Assembly**: Se mantienen los shock sets (front/rear) en el titulo. Los titulos con Strut Assembly pueden quedar largos y usan el fallback progresivo.

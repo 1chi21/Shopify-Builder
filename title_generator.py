@@ -224,33 +224,41 @@ def has_leaf_springs(vdf_for_product, type_col):
 
 def determine_kit_type(internal_type_value=None, vdf_for_product=None, type_col=None):
     """
-    Determina si el producto es un "Leveling Kit" o "Lift Kit"
+    Determina si el producto es un "Leveling Kit", "Shocks Set Kit" o "Lift Kit"
     basándose en el valor de Internal Type o buscando en el DataFrame.
-    Retorna "Leveling Kit" si detecta "Leveling", "Lift Kit" en caso contrario.
+    Regla Carlos v1.11.11:
+    - "Leveling" -> "Leveling Kit"
+    - "Shocks Set" -> "Shocks Set Kit"
+    - otro -> "Lift Kit"
     """
     # Si se pasa el valor directo de Internal Type, usarlo
     if internal_type_value is not None and not pd.isna(internal_type_value):
-        if "leveling" in str(internal_type_value).lower():
+        val_lower = str(internal_type_value).lower()
+        if "leveling" in val_lower:
             return "Leveling Kit"
+        elif "shocks set" in val_lower:
+            return "Shocks Set Kit"
         else:
             return "Lift Kit"
-    
+
     # Si no, buscar en el DataFrame
     if vdf_for_product is None or len(vdf_for_product) == 0:
         return "Lift Kit"
-    
+
     # Buscar en columnas relevantes
     columns_to_check = ["Type", "Internal Type", "Product Type", "Platform"]
     if type_col:
         columns_to_check.insert(0, type_col)
-    
+
     for col in columns_to_check:
         if col in vdf_for_product.columns:
             values = vdf_for_product[col].dropna().astype(str).str.lower()
             for val in values:
                 if "leveling" in val:
                     return "Leveling Kit"
-    
+                elif "shocks set" in val:
+                    return "Shocks Set Kit"
+
     return "Lift Kit"
 
 
@@ -552,13 +560,13 @@ def _parse_bilstein_secondary(shock, secondary, position):
         if tech_code == "5160":
             return "Adjustable Shocks"
     elif shock_clean == "8112":
-        # 8112:
-        # - Si es DSA+: "Zone Control CR DSA+ Shocks" (con CR)
-        # - Si NO es DSA+ (ej: 5160, BYP, REG): "Zone Control Shocks" (SIN CR)
+        # 8112: SIEMPRE con "CR" (regla Carlos v1.11.11)
+        # - Si es DSA+: "Zone Control CR DSA+ Shocks" (con CR y DSA+)
+        # - Si NO es DSA+ (ej: 5160, BYP, REG): "Zone Control CR Shocks" (con CR, sin DSA+)
         if "DSA" in tech_code or "+" in tech_code:
             return "Zone Control CR DSA+ Shocks"
         else:
-            return "Zone Control Shocks"
+            return "Zone Control CR Shocks"
     elif shock_clean == "8100":
         # 8100: Smooth Body Shocks, Smooth Body DSA+ Shocks, o Bypass Shocks
         if tech_code == "BYP":
@@ -599,24 +607,25 @@ def is_bilstein_assembled(vdf):
 
 
 def build_bilstein_seo_title(vdf, model, year, gen, height, internal_type,
-                             front_shock, rear_shock, type_col=None):
+                             front_shock, rear_shock, engine="", drive="", trim="",
+                             type_col=None):
     """
     Construye el SEO Title para productos Bilstein.
-    Formato: Bilstein {shocks} {model} {gen} {internal_type} {height} ({year})
-    Ejemplo: Bilstein 6112/5160 4Runner 5th Gen Lift Kit 1-3" (2010-2024)
+    Formato: Bilstein {shocks} {model} [engine] [drive] [trim] {gen} {internal_type} {height} ({year})
+    Ejemplo: Bilstein 6112/5160 4Runner Gas 4WD 5th Gen Lift Kit 1-3" (2010-2024)
     No se aplica LC100 (Land Cruiser), Non Rubicon, ni multi-modelo.
+    Regla Carlos v1.11.11: se incluyen engine, drive, trim cuando existen.
     """
     shocks_str = format_bilstein_shocks(front_shock, rear_shock)
 
-    # Siempre normalizar el internal_type para evitar plurales como "Lift Kits"
-    # determine_kit_type convierte "Lift Kits" -> "Lift Kit" y "Leveling Kits" -> "Leveling Kit"
+    # Siempre normalizar el internal_type
     kit_type = determine_kit_type(
         internal_type_value=internal_type if internal_type else None,
         vdf_for_product=vdf,
         type_col=type_col
     )
 
-    # Formatear height: siempre agregar " al final (el input de Bilstein no trae " inch")
+    # Formatear height
     if height:
         h = height.replace(" inch", "").strip()
         height_formatted = f'{h}"'
@@ -624,11 +633,18 @@ def build_bilstein_seo_title(vdf, model, year, gen, height, internal_type,
         height_formatted = ""
     year_formatted = f"({year})" if year else ""
 
-    # Regla Carlos: si hay generacion (ej: "5th Gen", "5thGen") la pone,
-    # si no la hay (es un año/rango) la omite para evitar duplicar con el year del final
+    # Regla Carlos: si hay generacion la pone, si es año la omite
     gen_clean = get_generation(gen)
 
-    parts = ["Bilstein", shocks_str, model, gen_clean, kit_type, height_formatted, year_formatted]
+    # Engine, drive, trim (orden: engine -> drive -> trim, igual que OME)
+    parts = ["Bilstein", shocks_str, model]
+    if engine and should_include_engine(engine):
+        parts.append(engine)
+    if drive:
+        parts.append(drive)
+    if trim and not is_non_rubicon(trim):
+        parts.append(trim)
+    parts.extend([gen_clean, kit_type, height_formatted, year_formatted])
 
     # Assembly: precaucion para cualquier marca
     if is_bilstein_assembled(vdf):
@@ -639,7 +655,8 @@ def build_bilstein_seo_title(vdf, model, year, gen, height, internal_type,
 
 
 def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
-                             front_shock, rear_shock, type_col=None,
+                             front_shock, rear_shock, engine="", drive="", trim="",
+                             type_col=None,
                              secondary_shock_type_col=None, position_col=None):
     """
     Construye el GMC Title para productos Bilstein.
@@ -683,7 +700,15 @@ def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
     gen_clean = get_generation(gen)
 
     # Base part
-    parts = ["Bilstein", shocks_str, model, gen_clean, kit_type, height_formatted, year_formatted]
+    # Engine, drive, trim (regla Carlos v1.11.11)
+    parts = ["Bilstein", shocks_str, model]
+    if engine and should_include_engine(engine):
+        parts.append(engine)
+    if drive:
+        parts.append(drive)
+    if trim and not is_non_rubicon(trim):
+        parts.append(trim)
+    parts.extend([gen_clean, kit_type, height_formatted, year_formatted])
     if is_bilstein_assembled(vdf):
         parts.insert(-2, ASSEMBLY_TEXT)
     parts = [p for p in parts if p]

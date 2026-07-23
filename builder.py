@@ -626,9 +626,13 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
         if is_bilstein(brand):
             # Reglas Bilstein: front/rear shocks, Gen = años sin filtrar
             front_shock, rear_shock = get_bilstein_shocks(vdf, shock_col, position_col)
+            engine_val_bil = clean_str(first.get(engine_col, "")) if engine_col and engine_col in vdf.columns else ""
+            drive_val_bil = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
+            trim_val_bil = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
             seo_title = build_bilstein_seo_title(
                 vdf, model, year, gen_val, lift_range, internal_type_val,
-                front_shock, rear_shock, type_col
+                front_shock, rear_shock, type_col=type_col,
+                engine=engine_val_bil, drive=drive_val_bil, trim=trim_val_bil
             )
         else:
             # Reglas OME (existentes)
@@ -691,11 +695,15 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
             if is_bilstein(brand):
                 # Reglas Bilstein: front/rear shocks
                 front_shock, rear_shock = get_bilstein_shocks(sku_rows, shock_col, position_col)
+                engine_val_bil = clean_str(row.get(engine_col, "")) if engine_col and engine_col in sku_rows.columns else ""
+                drive_val_bil = clean_str(row.get(drive_col, "")) if drive_col and drive_col in sku_rows.columns else ""
+                trim_val_bil = clean_str(row.get(trim_col, "")) if trim_col and trim_col in sku_rows.columns else ""
                 gmc_title = build_bilstein_gmc_title(
                     sku_rows, model, year, gen_val_var, lift_val.replace(" inches", ""),
                     internal_type_var, front_shock, rear_shock, type_col,
                     secondary_shock_type_col=secondary_shock_type_col,
-                    position_col=position_col
+                    position_col=position_col,
+                    engine=engine_val_bil, drive=drive_val_bil, trim=trim_val_bil
                 )
             else:
                 # Reglas OME (existentes)
@@ -926,9 +934,13 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
         if is_bilstein(brand):
             # Reglas Bilstein: front/rear shocks, Gen = años sin filtrar
             front_shock_seo, rear_shock_seo = get_bilstein_shocks(vdf, shock_col, position_col)
+            engine_val_bil_seo = clean_str(first.get(engine_col, "")) if engine_col and engine_col in vdf.columns else ""
+            drive_val_bil_seo = clean_str(first.get(drive_col, "")) if drive_col and drive_col in vdf.columns else ""
+            trim_val_bil_seo = clean_str(first.get(trim_col, "")) if trim_col and trim_col in vdf.columns else ""
             seo_title = build_bilstein_seo_title(
                 vdf, model, year, gen_val, lift_range, internal_type_val,
-                front_shock_seo, rear_shock_seo, type_col
+                front_shock_seo, rear_shock_seo, type_col=type_col,
+                engine=engine_val_bil_seo, drive=drive_val_bil_seo, trim=trim_val_bil_seo
             )
         else:
             # Reglas OME (existentes)
@@ -997,11 +1009,16 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
             if is_bilstein(brand):
                 # Reglas Bilstein: front/rear shocks
                 front_shock_gmc, rear_shock_gmc = get_bilstein_shocks(sku_rows, shock_col, position_col)
+                engine_val_bil_gmc = clean_str(row.get(engine_col, "")) if engine_col and engine_col in sku_rows.columns else ""
+                drive_val_bil_gmc = clean_str(row.get(drive_col, "")) if drive_col and drive_col in sku_rows.columns else ""
+                trim_val_bil_gmc = clean_str(row.get(trim_col, "")) if trim_col and trim_col in sku_rows.columns else ""
                 gmc_title = build_bilstein_gmc_title(
                     sku_rows, model, year, gen_val_var, lift_range,
-                    internal_type_var, front_shock_gmc, rear_shock_gmc, type_col,
+                    internal_type_var, front_shock_gmc, rear_shock_gmc,
+                    type_col=type_col,
                     secondary_shock_type_col=secondary_shock_type_col,
-                    position_col=position_col
+                    position_col=position_col,
+                    engine=engine_val_bil_gmc, drive=drive_val_bil_gmc, trim=trim_val_bil_gmc
                 )
             else:
                 # Reglas OME (existentes)
