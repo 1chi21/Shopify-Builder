@@ -2,9 +2,18 @@ import streamlit as st
 import pandas as pd
 from builder import parse_input, analyze_input, build_matrixify_excel, build_seo_gmc_only, FRONT_LOAD_MAP, REAR_LOAD_MAP, map_option
 
-APP_VERSION = "1.11.11"
+APP_VERSION = "1.11.13"
 
 CHANGELOG = """
+### v1.11.13 (2026-07-20)
+- **Checkbox "Sin limite" en Tab 2**: Nuevo checkbox en Tab 2 ("SEO & GMC Titles") que cuando esta marcado desactiva el limite de 150 chars en el GMC de Bilstein. Permite comparar el titulo con y sin limite para ver que se cortaria. Carlos pidio esta opcion para hacer una comparacion antes de aprobar.
+- **Parametro `disable_gmc_limit` en build_seo_gmc_only**: Nuevo parametro opcional (default False) que se pasa a `build_bilstein_gmc_title` como `disable_limit`. Si el checkbox esta marcado, el parametro es True y el titulo GMC no se limita a 150 chars.
+
+### v1.11.12 (2026-07-20)
+- **"Shocks Set" sin "Kit"**: Regla Carlos v1.11.12: cuando el Internal Type es "Shocks Set", el kit_type ahora es "Shocks Set" (sin "Kit"). Antes era "Shocks Set Kit" (v1.11.11). Carlos confirmo que debe quedar unicamente "Shocks Set".
+- **Parametro `disable_limit` en build_bilstein_gmc_title**: Nuevo parametro opcional que desactiva el limite de 150 chars y el fallback progresivo. Cuando es True, el titulo GMC es el original (con todos los techs) sin acortar. Util para comparar y ver que se cortaria con el limite. Carlos pidio quitar el limite temporalmente para hacer una comparacion.
+- **Aislamiento**: El parametro es opcional (default False), asi que el comportamiento por defecto (con limite) no cambia.
+
 ### v1.11.11 (2026-07-20)
 - **"Shocks Set" como kit_type**: `determine_kit_type` ahora detecta "shocks set" (case-insensitive) y retorna "Shocks Set Kit" (antes retornaba "Lift Kit").
 - **8112 SIEMPRE con "CR"**: Se revirtio el cambio de v1.11.9. Para shock 8112, el tech ahora es "Zone Control CR Shocks" (con "CR") para no-DSA+, y "Zone Control CR DSA+ Shocks" para DSA+. Carlos confirmo que "CR" es parte del "Zone Control" y va junto siempre.
@@ -608,12 +617,18 @@ with tab2:
                         st.info("ℹ️ Columna ID no encontrada (SEO Titles se agruparán por vehículo)")
             
             st.divider()
-            
+
             col1, col2 = st.columns([1, 2])
-            
+
             with col1:
                 generate_seo_btn = st.button("🚀 Generar SEO & GMC Titles", type="primary", use_container_width=True, key="seo_generate")
-            
+                disable_limit_seo = st.checkbox(
+                    "⚠️ Sin límite (Bilstein GMC > 150 chars)",
+                    value=False,
+                    key="seo_disable_limit",
+                    help="Si está marcado, los títulos GMC de Bilstein NO se limitan a 150 chars y se muestra el título completo. Carlos pidió esta opción para comparar qué se cortaría con el límite."
+                )
+
             if generate_seo_btn:
                 with st.spinner("Generando títulos SEO y GMC..."):
                     try:
@@ -628,7 +643,8 @@ with tab2:
                             type_col=info_seo.get('type_col'),
                             secondary_shock_type_col=info_seo.get('secondary_shock_type_col'),
                             id_col=info_seo.get('id_col'),
-                            position_col=info_seo.get('position_col')
+                            position_col=info_seo.get('position_col'),
+                            disable_gmc_limit=disable_limit_seo
                         )
                         
                         st.success(f"✅ Generado exitosamente: {len(summary_seo)} productos")

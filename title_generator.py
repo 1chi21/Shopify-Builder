@@ -224,11 +224,11 @@ def has_leaf_springs(vdf_for_product, type_col):
 
 def determine_kit_type(internal_type_value=None, vdf_for_product=None, type_col=None):
     """
-    Determina si el producto es un "Leveling Kit", "Shocks Set Kit" o "Lift Kit"
+    Determina si el producto es un "Leveling Kit", "Shocks Set" o "Lift Kit"
     basándose en el valor de Internal Type o buscando en el DataFrame.
-    Regla Carlos v1.11.11:
+    Regla Carlos v1.11.12:
     - "Leveling" -> "Leveling Kit"
-    - "Shocks Set" -> "Shocks Set Kit"
+    - "Shocks Set" -> "Shocks Set" (sin "Kit", regla Carlos v1.11.12)
     - otro -> "Lift Kit"
     """
     # Si se pasa el valor directo de Internal Type, usarlo
@@ -237,7 +237,7 @@ def determine_kit_type(internal_type_value=None, vdf_for_product=None, type_col=
         if "leveling" in val_lower:
             return "Leveling Kit"
         elif "shocks set" in val_lower:
-            return "Shocks Set Kit"
+            return "Shocks Set"
         else:
             return "Lift Kit"
 
@@ -257,7 +257,7 @@ def determine_kit_type(internal_type_value=None, vdf_for_product=None, type_col=
                 if "leveling" in val:
                     return "Leveling Kit"
                 elif "shocks set" in val:
-                    return "Shocks Set Kit"
+                    return "Shocks Set"
 
     return "Lift Kit"
 
@@ -657,7 +657,8 @@ def build_bilstein_seo_title(vdf, model, year, gen, height, internal_type,
 def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
                              front_shock, rear_shock, engine="", drive="", trim="",
                              type_col=None,
-                             secondary_shock_type_col=None, position_col=None):
+                             secondary_shock_type_col=None, position_col=None,
+                             disable_limit=False):
     """
     Construye el GMC Title para productos Bilstein.
     Formato: Bilstein {shocks} {model} {gen} {internal_type} {height} ({year}) {front_tech}, {rear_tech}
@@ -783,16 +784,21 @@ def build_bilstein_gmc_title(vdf, model, year, gen, height, internal_type,
     # Probar todas las transformaciones
     transforms = get_transformations(front_tech, rear_tech)
     gmc_title = None
-    for f_tech, r_tech in transforms:
-        candidate = build_with_tech(f_tech, r_tech)
-        if len(candidate) <= GMC_TITLE_MAX_LENGTH:
-            gmc_title = candidate
-            break
+    if disable_limit:
+        # Sin limite: usar la primera transformacion (con todos los tech) para ver el titulo completo
+        f_tech, r_tech = transforms[0] if transforms else (front_tech, rear_tech)
+        gmc_title = build_with_tech(f_tech, r_tech)
+    else:
+        for f_tech, r_tech in transforms:
+            candidate = build_with_tech(f_tech, r_tech)
+            if len(candidate) <= GMC_TITLE_MAX_LENGTH:
+                gmc_title = candidate
+                break
 
-    # Si ninguna transformacion entra, marcar con [EXCEDE]
+    # Si ninguna transformacion entra, marcar con [EXCEDE] (solo si el limite esta activo)
     if gmc_title is None:
         gmc_title = title_base
-        if len(gmc_title) > GMC_TITLE_MAX_LENGTH:
+        if not disable_limit and len(gmc_title) > GMC_TITLE_MAX_LENGTH:
             gmc_title = f"{gmc_title} [EXCEDE {GMC_TITLE_MAX_LENGTH} CHARS]"
 
     return gmc_title

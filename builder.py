@@ -703,7 +703,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
                     internal_type_var, front_shock, rear_shock, type_col,
                     secondary_shock_type_col=secondary_shock_type_col,
                     position_col=position_col,
-                    engine=engine_val_bil, drive=drive_val_bil, trim=trim_val_bil
+                    engine=engine_val_bil, drive=drive_val_bil, trim=trim_val_bil,
+                    disable_limit=disable_gmc_limit
                 )
             else:
                 # Reglas OME (existentes)
@@ -803,7 +804,8 @@ def build_matrixify_excel(df, tags="Full Lift Kit, Liftkit", status="Draft",
 def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
                        engine_col=None, drive_col=None, trim_col=None, type_col=None,
                        secondary_shock_type_col=None,
-                       id_col=None, position_col=None):
+                       id_col=None, position_col=None,
+                       disable_gmc_limit=False):
     """
     Genera un archivo Excel con SOLO los metafields SEO Title y GMC Title
     para actualizar productos existentes en Shopify.
@@ -1018,7 +1020,8 @@ def build_seo_gmc_only(df, lift_col=None, shock_col=None, gen_col=None,
                     type_col=type_col,
                     secondary_shock_type_col=secondary_shock_type_col,
                     position_col=position_col,
-                    engine=engine_val_bil_gmc, drive=drive_val_bil_gmc, trim=trim_val_bil_gmc
+                    engine=engine_val_bil_gmc, drive=drive_val_bil_gmc, trim=trim_val_bil_gmc,
+                    disable_limit=disable_gmc_limit
                 )
             else:
                 # Reglas OME (existentes)
